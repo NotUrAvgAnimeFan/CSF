@@ -1,33 +1,22 @@
-#
-# Makefile for CSF Assignment 1
-#
-# You should not need to change anything in this makefile
-#
+CC = gcc
 
-C_SRCS = apintTests.c apint.c tctest.c
+# Note: we use -std=gnu11 rather than -std=c11 in order to use the
+# sigjmp_buf data type
 CFLAGS = -g -Wall -Wextra -pedantic -std=gnu11
 
 %.o : %.c
-	gcc $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $*.c -o $*.o
 
-all : apintTests
+all : fixedpoint_tests
 
-apintTests : apintTests.o apint.o tctest.o
-	gcc -o $@ apintTests.o apint.o tctest.o -lm
+fixedpoint_tests : fixedpoint.o fixedpoint_tests.o tctest.o
+	$(CC) -o $@ fixedpoint.o fixedpoint_tests.o tctest.o
 
-# Use this target to create a zipfile that you can submit to Gradescope
-.PHONY: solution.zip
-solution.zip :
-	rm -f solution.zip
-	zip -9r $@ Makefile *.h *.c README.txt
+fixedpoint.o : fixedpoint.c fixedpoint.h
+
+fixedpoint_tests.o : fixedpoint_tests.c fixedpoint.h tctest.h
+
+tctest.o : tctest.c tctest.h
 
 clean :
-	rm -f *.o apintTests depend.mak solution.zip
-
-depend.mak :
-	touch $@
-
-depend :
-	gcc -M $(C_SRCS) > depend.mak
-
-include depend.mak
+	rm -f fixedpoint_tests *.o

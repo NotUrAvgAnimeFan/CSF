@@ -1,4 +1,2 @@
 /*.o
-/apintTests
-/depend.mak
-/solution.zip
+/fixedpoint_tests
