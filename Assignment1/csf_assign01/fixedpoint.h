@@ -2,9 +2,20 @@
 #define FIXEDPREC_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct {
-  // TODO: add fields
+
+  uint64_t integer1;
+  uint64_t integer2;
+  bool valid_nonnegative;
+  bool valid_negative;
+  bool error;
+  bool positive_overflow;
+  bool negative_overflow;
+  bool positive_underflow;
+  bool negative_underflow;
+  
 } Fixedpoint;
 
 // Create a Fixedpoint value representing an integer.

@@ -10,14 +10,33 @@ static Fixedpoint DUMMY;
 
 Fixedpoint fixedpoint_create(uint64_t whole) {
   // TODO: implement
-  assert(0);
-  return DUMMY;
+  Fixedpoint made;
+  made.integer1 = whole;
+  made.integer2 = 0;
+  made.valid_nonnegative = true;
+  made.valid_negative = false;
+  made.error = false;
+  made.positive_overflow = false;
+  made.negative_overflow = false;
+  made.positive_underflow = false;
+  made.negative_underflow = false;
+  
+  return made;
 }
 
 Fixedpoint fixedpoint_create2(uint64_t whole, uint64_t frac) {
-  // TODO: implement
-  assert(0);
-  return DUMMY;
+  
+  Fixedpoint made;
+  made.integer1 = whole;
+  made.integer2 = frac;
+  made.valid_nonnegative = true;
+  made.valid_negative = false;
+  made.error = false;
+  made.positive_overflow = false;
+  made.negative_overflow = false;
+  made.positive_underflow = false;
+  made.negative_underflow = false;
+  return made;
 }
 
 Fixedpoint fixedpoint_create_from_hex(const char *hex) {
@@ -27,15 +46,11 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
 }
 
 uint64_t fixedpoint_whole_part(Fixedpoint val) {
-  // TODO: implement
-  assert(0);
-  return 0UL;
+  return val.integer1;
 }
 
 uint64_t fixedpoint_frac_part(Fixedpoint val) {
-  // TODO: implement
-  assert(0);
-  return 0UL;
+  return val.integer2;
 }
 
 Fixedpoint fixedpoint_add(Fixedpoint left, Fixedpoint right) {
@@ -76,8 +91,10 @@ int fixedpoint_compare(Fixedpoint left, Fixedpoint right) {
 
 int fixedpoint_is_zero(Fixedpoint val) {
   // TODO: implement
-  assert(0);
-  return 0;
+  if (val.valid_nonnegative == false && val.valid_negative == false && (val.integer1 != 0 || val.integer2 != 0)) {
+    return 0;
+  }
+  return 1;
 }
 
 int fixedpoint_is_err(Fixedpoint val) {
