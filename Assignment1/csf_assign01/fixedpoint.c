@@ -49,9 +49,21 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
     made.valid_nonnegative = true;
     made.valid_negative = false;
   }
-  
+
+  int is_digit;
   int i = 0;
-  while (i < 16 && hex[i + starting_point] != '.') {
+  while (hex[i + starting_point] != '.') {
+    is_digit = isxdigit(hex[i + starting_point]);
+    if (i > 15 || is_digit == 0) {
+      made.integer1 = strtoul(whole, NULL, 16);
+      made.integer2 = 0;
+      made.error = true;
+      made.positive_overflow = false;
+      made.negative_overflow = false;
+      made.positive_underflow = false;
+      made.negative_underflow = false;
+      return made;
+    }
     whole[i] = hex[i + starting_point];
     i++; 
   }
@@ -60,16 +72,37 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
 
   made.integer1 = strtoul(whole, NULL, 16);
 
-  int size = strlen(hex) - i;
+  int size = strlen(hex) - (i + starting_point);
+  if (size > 16) {
+    made.integer2 = 1;
+    made.error = true;
+    made.positive_overflow = false;
+    made.negative_overflow = false;
+    made.positive_underflow = false;
+    made.negative_underflow = false;
+    return made;
+  }
   
   for (int j = 0; j < 16; j++) {
+    
     if (j >= size) {
       fraction[j] = '0';
     } else {
-    fraction[j] = hex[j + i];
+      is_digit = isxdigit(hex[j + i + starting_point]);
+      if (is_digit == 0) {
+	made.integer2 = 1;
+	made.error = true;
+	made.positive_overflow = false;
+	made.negative_overflow = false;
+	made.positive_underflow = false;
+	made.negative_underflow = false;
+	return made;
+      }
+      
+      fraction[j] = hex[j + i + starting_point];
     }
   }
-
+  
   made.integer2 = strtoul(fraction, NULL, 16);
   made.error = false;
   made.positive_overflow = false;
@@ -92,6 +125,7 @@ Fixedpoint fixedpoint_add(Fixedpoint left, Fixedpoint right) {
   uint64_t carry = 0;
   uint64_t frac_result;
   uint64_t whole_result;
+  
   if ((left.valid_nonnegative && right.valid_nonnegative) || (left.valid_negative && right.valid_negative)) {
     frac_result = left.integer2 + right.integer2;
     if (frac_result < left.integer2) {
@@ -124,7 +158,15 @@ Fixedpoint fixedpoint_add(Fixedpoint left, Fixedpoint right) {
     made.positive_underflow = false;
     made.negative_underflow = false;
     
+  } else if (left.valid_negative && right.valid_nonnegative) {
+    left.valid_nonnegative = true;
+    left.valid_negative = false;
+    
+    return fixedpoint_sub(right, left);
+
   } else if (left.valid_nonnegative && right.valid_negative) {
+    right.valid_nonnegative = true;
+    right.valid_negative = false;
     return fixedpoint_sub(left, right);
   }
   
@@ -153,12 +195,38 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
       whole_result = right.integer1 - left.integer1;
       made.valid_nonnegative = false;
       made.valid_negative = true;
-    } else {
+    } else if ((left.integer1 < right.integer1) && (left.integer2 > right.integer2)){
       frac_result = left.integer2 - right.integer2;
       whole_result = right.integer1 - left.integer1;
       made.valid_nonnegative = false;
+      made.valid_negative = true;
+    } else if (left.integer1 < right.integer1 && left.integer2 == right.integer2) {
+      whole_result = right.integer1 - left.integer1;
+      frac_result = 0;
+      made.valid_negative = true;
+      made.valid_nonnegative = false;
+    } else if (left.integer1 > right.integer1 && left.integer2 == right.integer2) {
+      whole_result = left.integer1 - right.integer1;
+      frac_result = 0;
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+    } else if (left.integer2 < right.integer2) {
+      whole_result = 0;
+      frac_result = right.integer2 - left.integer2;
+      made.valid_negative = true;
+      made.valid_nonnegative = false;
+    } else if (left.integer2 > right.integer2) {
+      whole_result = 0;
+      frac_result = left.integer2 - right.integer2;
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+    } else {
+      whole_result = 0;
+      frac_result = 0;
+      made.valid_nonnegative = true;
       made.valid_negative = false;
     }
+    
   } else if (left.valid_nonnegative && right.valid_negative) {
     right.valid_negative = false;
     right.valid_nonnegative = true;
@@ -169,7 +237,7 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
     made = fixedpoint_add(left, right);
     return fixedpoint_negate(made);
   } else {
-    if ((left.integer1 > right.integer2) && (left.integer2 > right.integer2)) {
+    if ((left.integer1 > right.integer1) && (left.integer2 > right.integer2)) {
       frac_result = left.integer2 - right.integer2;
       whole_result = left.integer1 - right.integer1;
       made.valid_nonnegative = false;
@@ -184,12 +252,38 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
       whole_result = right.integer1 - left.integer1;
       made.valid_nonnegative = true;
       made.valid_negative = false;
-    } else {
+    } else if ((left.integer1 < right.integer1) && (left.integer2 > right.integer2)) {
       frac_result = left.integer2 - right.integer2;
       whole_result = right.integer1 - left.integer1;
       made.valid_nonnegative = true;
       made.valid_negative = false;
+    } else if (left.integer1 < right.integer1 && left.integer2 == right.integer2) {
+      whole_result = right.integer1 - left.integer1;
+      frac_result = 0;
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+    } else if (left.integer1 > right.integer1 && left.integer2 == right.integer2) {
+      whole_result = left.integer1 - right.integer1;
+      frac_result = 0;
+      made.valid_negative = true;
+      made.valid_nonnegative = false;
+    } else if (left.integer1 == right.integer1 && left.integer2 < right.integer2) {
+      whole_result = 0;
+      frac_result = right.integer2 - left.integer2;
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+    } else if (left.integer1 == right.integer1 && left.integer2 > right.integer2) {
+      whole_result = 0;
+      frac_result = left.integer2 - right.integer2;
+      made.valid_negative = true;
+      made.valid_nonnegative = false;
+    } else {
+      whole_result = 0;
+      frac_result = 0;
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
     }
+    
   }
 
   made.integer1 = whole_result;
@@ -203,11 +297,13 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
 }
 
 Fixedpoint fixedpoint_negate(Fixedpoint val) {
+  
   if (fixedpoint_is_zero(val) == 1) {
     return val;
   }
-  val.valid_nonnegative = false;
-  val.valid_negative = true;
+
+  val.valid_nonnegative = !(val.valid_nonnegative);
+  val.valid_negative = !(val.valid_negative);
   return val;
 }
 
@@ -423,10 +519,10 @@ char *fixedpoint_format_as_hex(Fixedpoint val) {
   s[offset] = whole[i];
   offset++;
   
-  printf("\n%s\n", s);
-  
   if (val.integer2 == 0) {
     s[offset] = '\0';
+    free(whole);
+    free(fraction);
     return s;
   }
  
@@ -453,6 +549,7 @@ char *fixedpoint_format_as_hex(Fixedpoint val) {
   }
   s[offset] = '\0';
 
-  
+  free(whole);
+  free(fraction);
   return s;
 }
