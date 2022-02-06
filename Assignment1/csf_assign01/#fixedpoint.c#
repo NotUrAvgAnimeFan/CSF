@@ -5,7 +5,11 @@
 #include <assert.h>
 #include "fixedpoint.h"
 
+// You can remove this once all of the functions are fully implemented
+static Fixedpoint DUMMY;
+
 Fixedpoint fixedpoint_create(uint64_t whole) {
+  // TODO: implement
   Fixedpoint made;
   made.integer1 = whole;
   made.integer2 = 0;
@@ -36,46 +40,88 @@ Fixedpoint fixedpoint_create2(uint64_t whole, uint64_t frac) {
 }
 
 Fixedpoint fixedpoint_create_from_hex(const char *hex) {
-  char *whole = malloc(16);
-  char *fraction = malloc(16);
-  int starting_point = 0;
+  
   Fixedpoint made;
-
-  if (hex[starting_point] == '-') {
-    made.valid_negative = true;
-    made.valid_nonnegative = false;
-    starting_point++;
-  } else {
-    made.valid_nonnegative = true;
-    made.valid_negative = false;
+  int size = strlen(hex);
+  int parts_size = 0;
+  int z = 0;
+  if (hex[z] == '-') {
+    z = 1;
   }
-  
-  int i = 0;
-  while (i < 16 && hex[i + starting_point] != '.') {
-    whole[i] = hex[i + starting_point];
-    i++; 
-  }
-  
-  i++;
-
-  made.integer1 = strtoul(whole, NULL, 16);
-
-  int size = strlen(hex) - i;
-  
-  for (int j = 0; j < 16; j++) {
-    if (j >= size) {
-      fraction[j] = '0';
+  for (z; z < size; z++) {
+    if (((hex[z] < '0' || hex [z] > '9') && (hex[z] < 'a' || hex[z] > 'f') && (hex[z] < 'A' || hex[z] > 'F') && (hex[z] != '.')) || parts_size > 16) {
+      made.error = true;
+      made.integer1 = 1;
+      made.interger2 = 0;
+      made.valid_nonnegative = false;
+      made.valid_negative = false;
+      made.positive_overflow = false;
+      made.negative_overflow = false;
+      made.positive_underflow = false;
+      made.negative_underflow = false;
+      return made;
+    }
+    if (hex[z] == '.') {
+      parts_size = 0;
     } else {
-    fraction[j] = hex[j + i];
+    parts_size++;
+
     }
   }
 
-  made.integer2 = strtoul(fraction, NULL, 16);
+  int stopping_point = 0;
+  int afterDecimal = 0;
+  int decimal1 = 0;
+  int decimal2 = 0;
+  int base = 1;
+  int length = strlen(hex);
+  if (hex[0] == '-') {
+    stopping_point = 1;
+  }
+  
+  for (int i = length--; i >= stopping_point; i--) {
+    if (hex[i] >= '0' && hex[i] <= '9') {
+      if (afterDecimal == 0) {
+	decimal1 += (hex[i] - 48) * base;
+      } else {
+	decimal2 += (hex[i] - 48) * base;
+      }
+      base *= 16;
+    } else if (hex[i] >= 'A' && hex [i] <= 'F') {
+      if (afterDecimal == 0) {
+	decimal1 += (hex[i] - 55) * base;
+      } else {
+	decimal2 += (hex[i] - 55) * base;
+      }
+      base *= 16;
+    } else if (hex[i] >= 'a' && hex[i] <= 'b') {
+      if (afterDecimal == 0) {
+	decimal1 += (hex[i] - 87) *  base;
+      } else {
+	decimal2 += (hex[i] - 87) * base;
+      }
+      base *= 16;
+    } else if (hex[i] == '.') {
+      afterDecimal = 1;
+      base = 1;
+    }
+  }
+  
+  made.integer1 = decimal2;
+  made.integer2 = decimal1;
+  if (stopping_point == 1) {
+    made.valid_nonnegative = false;
+    made.valid_negative = true;
+  } else {
+  made.valid_nonnegative = true;
+  made.valid_negative = false;
+  }
   made.error = false;
   made.positive_overflow = false;
   made.negative_overflow = false;
   made.positive_underflow = false;
   made.negative_underflow = false;
+  
   return made;
 }
 
@@ -88,6 +134,7 @@ uint64_t fixedpoint_frac_part(Fixedpoint val) {
 }
 
 Fixedpoint fixedpoint_add(Fixedpoint left, Fixedpoint right) {
+  // TODO: implement
   Fixedpoint made;
   uint64_t carry = 0;
   uint64_t frac_result;
@@ -187,13 +234,11 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
     } else {
       frac_result = left.integer2 - right.integer2;
       whole_result = right.integer1 - left.integer1;
-      made.valid_nonnegative = true;
+      made.valid_nonegative = true;
       made.valid_negative = false;
     }
   }
-
-  made.integer1 = whole_result;
-  made.integer2 = frac_result;
+  
   made.error = false;
   made.positive_overflow = false;
   made.negative_overflow = false;
@@ -212,90 +257,97 @@ Fixedpoint fixedpoint_negate(Fixedpoint val) {
 }
 
 Fixedpoint fixedpoint_halve(Fixedpoint val) {
-  
-  Fixedpoint made;
-  short carry_decimals = 0;
-  made.integer1 = val.integer1 >> 1;
-  if (val.integer1 % 2 == 1) {
-    carry_decimals = 1;
-  }
-  
-  made.integer2 = val.integer2 >> 1;
-  if (val.integer2 % 2 == 1) {
+  fixedpoint made;
+  uint64_t whole_halved_val;
+  uint64_t frac_havled_val;
+  if ((val.integer2 % 2) == 0) {
+    if ((val.integer1 % 2) == 0) {
+      whole_halved_val = val.integer1 / 2;
+      frac_halved_val = val.integer2 / 2;
+    } else {
+      whole_halved_val = val.integer1 / 2;
+      frac_halved_val = (val.integer2 / 2) + ((18446744073709551615 + 1) / 2);
+    }
+    if (val.valid_nonnegative) {
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+    } else {
+      made.valid_nonnegative = false;
+      made.valid_negative = true;
+    }
+    made.positive_underflow = false;
+    made.negative_underflow = false;
+    
+  } else {
+    if ((val.integer1 % 2) == 0) {
+      whole_halved_val = val.integer1 / 2;
+      frac_halved_val = val.integer2 / 2;
+    } else {
+      whole_halved_val = val.integer1 / 2;
+      frac_halved_val = (val.integer2 / 2) + ((18446744073709551615 + 1) / 2);
+    }
     if (val.valid_nonnegative) {
       made.valid_nonnegative = true;
       made.valid_negative = false;
       made.positive_underflow = true;
       made.negative_underflow = false;
     } else {
-      made.valid_negative = true;
       made.valid_nonnegative = false;
-      made.negative_underflow = true;
+      made.valid_negative = true;
       made.positive_underflow = false;
+      made.negative_underflow = true;
     }
-    
-    made.error = false;
-    made.positive_overflow = false;
-    made.negative_overflow = false;
-    return made;
   }
-  
-  if (carry_decimals == 1) {
-    made.integer2 += 1152921504606846976;
-  }
-  if (val.valid_nonnegative) {
-    made.valid_nonnegative = true;
-    made.valid_negative = false;
-  } else {
-    made.valid_negative = true;
-    made.valid_nonnegative = false;
-  }
+
   made.error = false;
   made.positive_overflow = false;
   made.negative_overflow = false;
-  made.positive_underflow = false;
-  made.negative_underflow = false;
-
+  
   return made;
 }
 
 Fixedpoint fixedpoint_double(Fixedpoint val) {
-  Fixedpoint made;
-  
-  made.integer1 = val.integer1 << 1;
-  if (val.integer1 >= 1152921504606846976) {
-    made.integer2 = val.integer2 << 1;
+  fixedpoint made;
+  uint64_t doubled_whole;
+  uint64_t doubled_frac;
+  short carry = 0;
+
+  doubled_frac = val.integer2 * 2;
+  if (doubled_frac < val.integer2) {
+    carry = 1;
+  }
+  doubled_whole = val.integer1 * 2;
+  if (carry = 1) {
+    doubled_whole++;
+  }
+
+  if (doubled_whole < val.integer1) {
     if (val.valid_nonnegative) {
       made.valid_nonnegative = true;
       made.valid_negative = false;
       made.positive_overflow = true;
       made.negative_overflow = false;
     } else {
-      made.valid_negative = true;
       made.valid_nonnegative = false;
-      made.negative_overflow = true;
+      made.valid_negative = true;
       made.positive_overflow = false;
+      made.negative_overflow = true;
     }
-    made.error = false;
-    made.positive_underflow = false;
-    made.negative_underflow = false;    
+  } else  {
+    made.positive_overflow = false;
+    made.negative_overflow = false;
+    if (val.valid_nonnegative) {
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+    } else  {
+      made.valid_nonnegative = false;
+      made.valid_negative = true;
+    }
   }
 
-  made.integer2 = val.integer2 << 1;
-  if (val.integer2 >= 1152921504606846976) {
-    made.integer1++;
-  }
-
-  if (val.valid_nonnegative) {
-    made.valid_nonnegative = true;
-    made.valid_negative = false;
-  } else {
-    made.valid_negative = true;
-    made.valid_nonnegative = false;
-  }
-
-  made.positive_overflow = false;
-  made.negative_overflow = false;
+  made.integer1 = doubled_whole;
+  made.integer2 = doubled_frac;
+  made.error = false;
   made.positive_underflow = false;
   made.negative_underflow = false;
   
@@ -343,6 +395,7 @@ int fixedpoint_compare(Fixedpoint left, Fixedpoint right) {
 }
 
 int fixedpoint_is_zero(Fixedpoint val) {
+  // TODO: implement
   if (val.valid_negative == false && (val.integer1 != 0 || val.integer2 != 0)) {
     return 0;
   }
@@ -350,49 +403,49 @@ int fixedpoint_is_zero(Fixedpoint val) {
 }
 
 int fixedpoint_is_err(Fixedpoint val) {
-  if (val.error) {
+  if (val.error == true) {
     return 1;
   }
   return 0;
 }
 
 int fixedpoint_is_neg(Fixedpoint val) {
-  if (val.valid_negative) {
+  if (val.valid_negative == true) {
     return 1;
   }
   return 0;
 }
 
 int fixedpoint_is_overflow_neg(Fixedpoint val) {
-  if (val.negative_overflow) {
+  if (val.negative_overflow == true) {
     return 1;
   }
   return 0;
 }
 
 int fixedpoint_is_overflow_pos(Fixedpoint val) {
-  if (val.positive_overflow) {
+  if (val.positive_overflow == true) {
     return 1;
   }
   return 0;
 }
 
 int fixedpoint_is_underflow_neg(Fixedpoint val) {
-  if (val.negative_underflow) {
+  if (val.negative_underflow == true) {
     return 1;
   }
   return 0;
 }
 
 int fixedpoint_is_underflow_pos(Fixedpoint val) {
-  if (val.positive_underflow) {
+  if (val.positive_underflow == true) {
     return 1;
   }
   return 0;
 }
 
 int fixedpoint_is_valid(Fixedpoint val) {
-  if (val.valid_nonnegative || val.valid_negative) {
+  if (val.valid_nonnegative == true || val.valid_negative) {
     return 1;
   }
   return 0;
@@ -401,58 +454,57 @@ int fixedpoint_is_valid(Fixedpoint val) {
 char *fixedpoint_format_as_hex(Fixedpoint val) {
   
   char *s = malloc(34);
-  char *whole = malloc(16);
-  char *fraction = malloc(16);
-  int offset = 0;
-  
+  int difference = 0;
+  uint64_t original_val1 = val.integer1;
+  uint64_t original_val2 = val.integer2;
+  int previous_val = 0;
+
   if (val.valid_negative) {
     s[0] = '-';
-    offset++;
+  } else {
+    s[0] = '';
   }
   
-  sprintf(whole, "%016lx", val.integer1); 
-  int i = 0;
-  while (i < 15) {
-    if (whole[i] != '0') {
-      s[offset] = whole[i];
-      offset++;
-    }
-    i++;
-  }
+  
 
-  s[offset] = whole[i];
-  offset++;
-  
-  printf("\n%s\n", s);
-  
   if (val.integer2 == 0) {
-    s[offset] = '\0';
     return s;
   }
- 
-  s[offset] = '.';
-  offset++;
-  sprintf(fraction, "%016lx", val.integer2);
   
-  for (int z = 15; z >= 0; z--) {
-    if (fraction[z] == '0') {
-      fraction[z] = '\0';
+  s[17] = '.';
+
+  for
+
+  
+  
+  
+  /*
+  if (val.valid_negative) {
+    s[0] = '-';
+    starting_point = 1;
+  }
+  if (val.integer2 != 0) {
+    if (starting_point == 1) {
+      spots_available_whole = 9;
+      spots_available_frac = 9;
     } else {
-      break;
+      spots_available_whole = 10;
+      spots_available_frac = 9;
     }
-    
+  } else {
+    if (starting_point == 1) {
+      spots_available_whole = 19; 
+      spots_available_frac = 0;
+    } else {
+      spots_available_whole = 20;
+      spots_available_frac = 0;
+    }
   }
 
   
-  int j = 0;
-  while (j < 16) {
+  for (int i = starting_point; i < 20; i++) {
     
-    s[offset] = fraction[j];
-    offset++;
-    j++;
   }
-  s[offset] = '\0';
-
-  
+  */
   return s;
 }
