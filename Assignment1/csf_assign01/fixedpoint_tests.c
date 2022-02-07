@@ -586,6 +586,13 @@ void test_compare(TestObjs *objs) {
   
   f1 = fixedpoint_create_from_hex("1.7");
   ASSERT(1 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("2.3");
+  ASSERT(1 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("0.5");
+  f2 = fixedpoint_create_from_hex("0.6");
+  ASSERT(-1 == fixedpoint_compare(f1, f2));
 }
 
 void test_is_overflow_neg(TestObjs *objs) {
