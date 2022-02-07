@@ -35,7 +35,8 @@ void test_simple_addition(TestObjs *objs);
 void test_simple_subtraction(TestObjs *objs);
 void test_simple_doubling(TestObjs *objs);
 void test_simple_halving(TestObjs *objs);
-
+void test_create_more_from_hex(TestObjs *objs);
+void test_more_negate(TestObjs *objs);
 
 
 int main(int argc, char **argv) {
@@ -61,6 +62,8 @@ int main(int argc, char **argv) {
   TEST(test_simple_subtraction);
   TEST(test_simple_doubling);
   TEST(test_simple_halving);
+  TEST(test_create_more_from_hex);
+  TEST(test_more_negate);
   // IMPORTANT: if you add additional test functions (which you should!),
   // make sure they are included here.  E.g., if you add a test function
   // "my_awesome_tests", you should add
@@ -149,6 +152,7 @@ void test_format_as_hex(TestObjs *objs) {
 }
 
 void test_negate(TestObjs *objs) {
+    
   // none of the test fixture objects are negative
   ASSERT(!fixedpoint_is_neg(objs->zero));
   ASSERT(!fixedpoint_is_neg(objs->one));
@@ -442,6 +446,12 @@ void test_simple_doubling(TestObjs *objs) {
   ASSERT(fixedpoint_is_neg(result));
   ASSERT(0x2UL == fixedpoint_whole_part(result));
 
+  toDouble = fixedpoint_create_from_hex("d");
+  result = fixedpoint_double(toDouble);
+  ASSERT(!(fixedpoint_is_neg(result)));
+  ASSERT(0x1aUL == fixedpoint_whole_part(result));
+
+
   toDouble = fixedpoint_create_from_hex("0.4");
   result = fixedpoint_double(toDouble);
   ASSERT(!(fixedpoint_is_neg(result)));
@@ -463,11 +473,86 @@ void test_simple_doubling(TestObjs *objs) {
   ASSERT(fixedpoint_is_neg(result));
   ASSERT(0x1UL == fixedpoint_whole_part(result));
   ASSERT(0x2000000000000000UL == fixedpoint_frac_part(result));
+
+  
+  toDouble = fixedpoint_create_from_hex("8000000000000000");
+  result = fixedpoint_double(toDouble);
+  ASSERT(!(fixedpoint_is_neg(result)));
+  ASSERT(0x0UL == fixedpoint_whole_part(result));
+  ASSERT(fixedpoint_is_overflow_pos(result));
+
+  toDouble = fixedpoint_create_from_hex("-8000000000000000");
+  result = fixedpoint_double(toDouble);
+  ASSERT(fixedpoint_is_overflow_neg(result));
+  
 }
 
 void test_simple_halving(TestObjs *objs) {
-  void(objs);
+  (void) objs;
 
+  Fixedpoint toHalve, result;
+  toHalve = fixedpoint_create_from_hex("4");
+  result = fixedpoint_halve(toHalve);
+  ASSERT(!(fixedpoint_is_neg(result)));
+  ASSERT(0x2UL == fixedpoint_whole_part(result));
 
+  toHalve = fixedpoint_create_from_hex("-4");
+  result = fixedpoint_halve(toHalve);
+  ASSERT(fixedpoint_is_neg(result));
+  ASSERT(0x2UL == fixedpoint_whole_part(result));
+
+  toHalve = fixedpoint_create_from_hex("1");
+  result = fixedpoint_halve(toHalve);
+  ASSERT(!(fixedpoint_is_neg(result)));
+  ASSERT(0x0UL == fixedpoint_whole_part(result));
+  ASSERT(0x8000000000000000UL == fixedpoint_frac_part(result));
+
+  toHalve = fixedpoint_create_from_hex("-1");
+  result = fixedpoint_halve(toHalve);
+  ASSERT(fixedpoint_is_neg(result));
+  ASSERT(0x0UL == fixedpoint_whole_part(result));
+  ASSERT(0x8000000000000000UL == fixedpoint_frac_part(result));
+  
+  
+}
+
+void test_create_more_from_hex(TestObjs *objs) {
+  (void) objs;
+
+  Fixedpoint result;
+
+  result = fixedpoint_create_from_hex(" ");
+  ASSERT(fixedpoint_is_err(result));
+
+  result = fixedpoint_create_from_hex(".");
+  ASSERT(fixedpoint_is_err(result));
+
+  result = fixedpoint_create_from_hex("-");
+  ASSERT(fixedpoint_is_err(result));
+
+  result = fixedpoint_create_from_hex("-0.0");
+  ASSERT(fixedpoint_is_err(result));
+
+  result = fixedpoint_create_from_hex("");
+  ASSERT(fixedpoint_is_err(result));
+  
+  
+}
+
+void test_more_negate(TestObjs *objs) {
+  (void) objs;
+  
+  Fixedpoint toNegate, result;
+  toNegate = fixedpoint_create_from_hex("-1");
+  ASSERT(fixedpoint_is_neg(toNegate));
+  ASSERT(0x1UL == fixedpoint_whole_part(toNegate));
+  result = fixedpoint_negate(toNegate);
+  ASSERT(0x1UL == fixedpoint_whole_part(result));
+  ASSERT(!(fixedpoint_is_neg(result)));
+
+  toNegate = fixedpoint_create_from_hex("1");
+  result = fixedpoint_negate(toNegate);
+  ASSERT(fixedpoint_is_neg(result));
+  ASSERT(0x1UL == fixedpoint_whole_part(result));
   
 }

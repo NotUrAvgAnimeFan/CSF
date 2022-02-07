@@ -41,6 +41,21 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
   int starting_point = 0;
   Fixedpoint made;
 
+  if (strlen(hex) <= 1 && (hex[0] == '-' || hex[0] == '.')) {
+    free(whole);
+    free(fraction);
+    made.error = true;
+    made.integer1 = 1;
+    made.integer2 = 1;
+    made.valid_nonnegative = false;
+    made.valid_negative = false;
+    made.positive_overflow = false;
+    made.negative_overflow = false;
+    made.positive_underflow = false;
+    made.negative_underflow = false;
+    return made;
+  }
+  
   if (hex[starting_point] == '-') {
     made.valid_negative = true;
     made.valid_nonnegative = false;
@@ -62,6 +77,8 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
       made.negative_overflow = false;
       made.positive_underflow = false;
       made.negative_underflow = false;
+      free(whole);
+      free(fraction);      
       return made;
     }
     whole[i] = hex[i + starting_point];
@@ -96,6 +113,8 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
 	made.negative_overflow = false;
 	made.positive_underflow = false;
 	made.negative_underflow = false;
+	free(whole);
+	free(fraction);
 	return made;
       }
       
@@ -104,11 +123,17 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
   }
   
   made.integer2 = strtoul(fraction, NULL, 16);
+  if (made.integer1 == 0 && made.integer2 == 0) {
+    made.valid_negative = false;
+    made.valid_nonnegative = true;
+  }
   made.error = false;
   made.positive_overflow = false;
   made.negative_overflow = false;
   made.positive_underflow = false;
   made.negative_underflow = false;
+  free(whole);
+  free(fraction);
   return made;
 }
 
@@ -298,12 +323,18 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
 
 Fixedpoint fixedpoint_negate(Fixedpoint val) {
   
-  if (fixedpoint_is_zero(val) == 1) {
+  if (val.integer1 == 0 && val.integer2 == 0) {
     return val;
   }
 
-  val.valid_nonnegative = !(val.valid_nonnegative);
-  val.valid_negative = !(val.valid_negative);
+  if (val.valid_nonnegative == true) {
+    val.valid_nonnegative = false;
+    val.valid_negative = true;
+  } else  {
+    val.valid_nonnegative = true;
+    val.valid_negative = false;
+  }
+  
   return val;
 }
 
@@ -337,7 +368,7 @@ Fixedpoint fixedpoint_halve(Fixedpoint val) {
   }
   
   if (carry_decimals == 1) {
-    made.integer2 += 1152921504606846976;
+    made.integer2 += 9223372036854775808;
   }
   if (val.valid_nonnegative) {
     made.valid_nonnegative = true;
@@ -357,10 +388,10 @@ Fixedpoint fixedpoint_halve(Fixedpoint val) {
 
 Fixedpoint fixedpoint_double(Fixedpoint val) {
   Fixedpoint made;
-  
-  made.integer1 = val.integer1 << 1;
-  if (val.integer1 >= 1152921504606846976) {
-    made.integer2 = val.integer2 << 1;
+  uint64_t max = 9223372036854775808;
+  if (val.integer1 >= max) {
+    made.integer1 = 0;
+    made.integer2 = 0;
     if (val.valid_nonnegative) {
       made.valid_nonnegative = true;
       made.valid_negative = false;
@@ -375,10 +406,12 @@ Fixedpoint fixedpoint_double(Fixedpoint val) {
     made.error = false;
     made.positive_underflow = false;
     made.negative_underflow = false;    
+    return made;
   }
 
+  made.integer1 = val.integer1 << 1;
   made.integer2 = val.integer2 << 1;
-  if (val.integer2 >= 1152921504606846976) {
+  if (val.integer2 >= max) {
     made.integer1++;
   }
 
@@ -439,7 +472,7 @@ int fixedpoint_compare(Fixedpoint left, Fixedpoint right) {
 }
 
 int fixedpoint_is_zero(Fixedpoint val) {
-  if (val.valid_negative == false && (val.integer1 != 0 || val.integer2 != 0)) {
+  if (val.integer1 == 0 && val.integer2 == 0) {
     return 0;
   }
   return 1;
@@ -453,7 +486,8 @@ int fixedpoint_is_err(Fixedpoint val) {
 }
 
 int fixedpoint_is_neg(Fixedpoint val) {
-  if (val.valid_negative) {
+  
+  if (val.valid_negative == true) {
     return 1;
   }
   return 0;
