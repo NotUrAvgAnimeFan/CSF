@@ -37,7 +37,10 @@ void test_simple_doubling(TestObjs *objs);
 void test_simple_halving(TestObjs *objs);
 void test_create_more_from_hex(TestObjs *objs);
 void test_more_negate(TestObjs *objs);
-
+void test_compare(TestObjs *objs);
+void test_is_overflow_neg(TestObjs *objs);
+void test_is_underflow_pos(TestObjs *objs);
+void test_is_underflow_neg(TestObjs *objs);
 
 int main(int argc, char **argv) {
   // if a testname was specified on the command line, only that
@@ -64,6 +67,10 @@ int main(int argc, char **argv) {
   TEST(test_simple_halving);
   TEST(test_create_more_from_hex);
   TEST(test_more_negate);
+  TEST(test_compare);
+  TEST(test_is_overflow_neg);
+  TEST(test_is_underflow_pos);
+  TeST(test_is_underflow_neg);
   // IMPORTANT: if you add additional test functions (which you should!),
   // make sure they are included here.  E.g., if you add a test function
   // "my_awesome_tests", you should add
@@ -554,5 +561,52 @@ void test_more_negate(TestObjs *objs) {
   result = fixedpoint_negate(toNegate);
   ASSERT(fixedpoint_is_neg(result));
   ASSERT(0x1UL == fixedpoint_whole_part(result));
+  
+}
+
+void test_compare(TestObjs *objs) {
+  (void) objs;
+  Fixedpoint f1, f2;
+  f1 = fixedpoint_create_from_hex("1");
+  f2 = fixedpoint_create_from_hex("1");
+  ASSERT(0 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("-1");
+  ASSERT(-1 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("5");
+  ASSERT(1 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("1.5");
+  f2 = fixedpoint_create_from_hex("1.5");
+  ASSERT(0 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("1.2");
+  ASSERT(-1 == fixedpoint_compare(f1, f2));
+  
+  f1 = fixedpoint_create_from_hex("1.7");
+  ASSERT(1 == fixedpoint_compare(f1, f2));
+}
+
+void test_is_overflow_neg(TestObjs *objs) {
+  Fixedpoint diff, sum, doub;
+  
+  diff = fixedpoint_sub(objs->min, objs->one);
+  ASSERT(fixedpoint_is_overflow_neg(diff));
+  
+  Fixedpoint negative_one = fixedpoint_negate(objs->one);
+  sum = fixedpoint_add(objs->min, negative_one);
+  ASSERT(fixedpoint_is_overflow_neg(sum));
+  
+  doub = fixedpoint_double(objs->min);
+  ASSERT(fixedpoint_is_overflow_neg(doub));
+
+}
+
+void test_is_underflow_pos(TestObjs *objs) {
+
+}
+
+void test_is_underflow_neg(TestObjs *objs){ 
   
 }
