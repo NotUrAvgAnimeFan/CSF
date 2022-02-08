@@ -43,8 +43,6 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
 
 //create error fixedpoint value for invalid hex string
   if (strlen(hex) <= 1 && (hex[0] == '-' || hex[0] == '.')) {
-    free(whole);
-    free(fraction);
     made.error = true;
     made.integer1 = 1;
     made.integer2 = 1;
@@ -54,6 +52,8 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
     made.negative_overflow = false;
     made.positive_underflow = false;
     made.negative_underflow = false;
+    free(whole);
+    free(fraction);
     return made;
   }
   
@@ -81,7 +81,7 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
       made.positive_underflow = false;
       made.negative_underflow = false;
       free(whole);
-      free(fraction);      
+      free(fraction);
       return made;
     }
     whole[i] = hex[i + starting_point];
@@ -102,6 +102,8 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
     made.negative_overflow = false;
     made.positive_underflow = false;
     made.negative_underflow = false;
+    free(whole);
+    free(fraction);
     return made;
   }
   //if the fraction part of the hex string has invalid hex digits, create an error fixedpoint 
@@ -217,8 +219,15 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
   
   //compute subtraction when both fixedpoint operands are nonnegative
   if (left.valid_nonnegative && right.valid_nonnegative) {
-    //if left operand's whole and fraction parts are both bigger than the right operand's, simple subtraction   
-    if ((left.integer1 > right.integer1) && (left.integer2 > right.integer2)) {
+    //both operands are equal therefore the result is zero  
+    if (left.integer1 == right.integer1 && left.integer2 == right.integer2) {
+      whole_result = 0;
+      frac_result = 0;
+      made.valid_nonnegative = true;
+      made.valid_negative = false;
+
+      //if left operand's whole and fraction parts are both biger than the right operand's, simple subtraction
+    } else if ((left.integer1 > right.integer1) && (left.integer2 > right.integer2)) {
       frac_result = left.integer2 - right.integer2;
       whole_result = left.integer1 - right.integer1;
       made.valid_nonnegative = true;
@@ -227,7 +236,7 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
       //if left operand's whole part is bigger but fraction part is smaller, borrow  
     } else if ((left.integer1 > right.integer1) && (left.integer2 < right.integer2)) {
       whole_result = left.integer1 - right.integer1 - 1;
-      frac_result = left.integer2 - right.integer2 + 18446744073709551615 + 1;
+      frac_result = 18446744073709551615 - (right.integer2 - left.integer2) + 1;
       made.valid_nonnegative = true;
       made.valid_negative = false;
 	    
@@ -241,8 +250,8 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
       //if left operand's whole part is smaller but fraction part is bigger, 
       //flipped subtraction and negation for whole part and simple subtraction for fraction part
     } else if ((left.integer1 < right.integer1) && (left.integer2 > right.integer2)){
-      frac_result = left.integer2 - right.integer2;
-      whole_result = right.integer1 - left.integer1;
+      whole_result = right.integer1 - left.integer1 - 1;
+      frac_result = 18446744073709551615 - (left.integer2 - right.integer2) + 1;
       made.valid_nonnegative = false;
       made.valid_negative = true;
 	    
@@ -273,95 +282,24 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
       frac_result = left.integer2 - right.integer2;
       made.valid_nonnegative = true;
       made.valid_negative = false;
-
-      //operands are equal
-    } else {
-      whole_result = 0;
-      frac_result = 0;
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
     }
+    
     //add when positive left operand and negative right operand 
   } else if (left.valid_nonnegative && right.valid_negative) {
-    right.valid_negative = false;
-    right.valid_nonnegative = true;
-    return fixedpoint_add(left, right);
+    return fixedpoint_add(left, fixedpoint_negate(right));
         
     //add as nonnegatives and negate result when negative left operand and positive right operand 
   } else if (left.valid_negative && right.valid_nonnegative) {
-    left.valid_nonnegative = true;
-    left.valid_negative = false;
-    made = fixedpoint_add(left, right);
-    return fixedpoint_negate(made);
+    
+    return fixedpoint_add(left, fixedpoint_negate(right));
 	  
     //both operands negative
   } else {
-    //left operand's whole and fraction part bigger
-    if ((left.integer1 > right.integer1) && (left.integer2 > right.integer2)) {
-      frac_result = left.integer2 - right.integer2;
-      whole_result = left.integer1 - right.integer1;
-      made.valid_nonnegative = false;
-      made.valid_negative = true;
-	    
-    //left operand's whole part bigger and fraction part smaller, borrow
-    } else if ((left.integer1 > right.integer1) && (left.integer2 < right.integer2)) {
-      whole_result = left.integer1 - right.integer1 - 1;
-      frac_result = left.integer2 - right.integer2 + 18446744073709551615 + 1;
-      made.valid_nonnegative = false;
-      made.valid_negative = true;
-	    
-     //left operand's whole and fraction part smaller 
-    } else if ((left.integer1 < right.integer1) && (left.integer2 < right.integer2)) {
-      frac_result = right.integer2 - left.integer2;
-      whole_result = right.integer1 - left.integer1;
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
-	    
-      //left operand's whole part smaller and fraction part smaller, borrow
-    } else if ((left.integer1 < right.integer1) && (left.integer2 > right.integer2)) {
-      frac_result = left.integer2 - right.integer2;
-      whole_result = right.integer1 - left.integer1;
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
-	    
-      //left operand's whole part smaller and fraction parts equal
-    } else if (left.integer1 < right.integer1 && left.integer2 == right.integer2) {
-      whole_result = right.integer1 - left.integer1;
-      frac_result = 0;
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
-      
-      //left operand's whole part bigger and fraction parts equal
-    } else if (left.integer1 > right.integer1 && left.integer2 == right.integer2) {
-      whole_result = left.integer1 - right.integer1;
-      frac_result = 0;
-      made.valid_negative = true;
-      made.valid_nonnegative = false;
-	    
-      //left operand's fraction part smaller and whole parts equal
-    } else if (left.integer1 == right.integer1 && left.integer2 < right.integer2) {
-      whole_result = 0;
-      frac_result = right.integer2 - left.integer2;
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
-	    
-      //left operand's fraction part bigger and whole parts equal
-    } else if (left.integer1 == right.integer1 && left.integer2 > right.integer2) {
-      whole_result = 0;
-      frac_result = left.integer2 - right.integer2;
-      made.valid_negative = true;
-      made.valid_nonnegative = false;
-	    
-      //operands equal
-    } else {
-      whole_result = 0;
-      frac_result = 0;
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
-    }
+    
+    return fixedpoint_sub(fixedpoint_negate(right), fixedpoint_negate(left));
     
   }
-
+  
   made.integer1 = whole_result;
   made.integer2 = frac_result;
   made.error = false;
@@ -457,16 +395,14 @@ Fixedpoint fixedpoint_double(Fixedpoint val) {
     made.integer1 = 0;
     made.integer2 = 0;
     if (val.valid_nonnegative) {
-      made.valid_nonnegative = true;
-      made.valid_negative = false;
       made.positive_overflow = true;
       made.negative_overflow = false;
     } else {
-      made.valid_negative = true;
-      made.valid_nonnegative = false;
       made.negative_overflow = true;
       made.positive_overflow = false;
     }
+    made.valid_nonnegative = true;
+    made.valid_negative = false;
     made.error = false;
     made.positive_underflow = false;
     made.negative_underflow = false;    
@@ -568,9 +504,9 @@ int fixedpoint_compare(Fixedpoint left, Fixedpoint right) {
 
 int fixedpoint_is_zero(Fixedpoint val) {
   if (val.integer1 == 0 && val.integer2 == 0) {
-    return 0;
+    return 1;
   }
-  return 1;
+  return 0;
 }
 
 int fixedpoint_is_err(Fixedpoint val) {
