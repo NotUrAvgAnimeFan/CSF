@@ -3,6 +3,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+
+#include <inttypes.h>
+
 #include "fixedpoint.h"
 
 Fixedpoint fixedpoint_create(uint64_t whole) {
@@ -41,12 +44,12 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
   int starting_point = 0;
   Fixedpoint made;
 
-//create error fixedpoint value for invalid hex string
-  if (strlen(hex) <= 1 && (hex[0] == '-' || hex[0] == '.')) {
+  //create error fixedpoint value for invalid hex string
+  if (strlen(hex) == 0 || (strlen(hex) == 1 && (hex[0] == '-' || hex[0] == '.'))) {
     made.error = true;
     made.integer1 = 1;
     made.integer2 = 1;
-    made.valid_nonnegative = false;
+    made.valid_nonnegative = true;
     made.valid_negative = false;
     made.positive_overflow = false;
     made.negative_overflow = false;
@@ -56,8 +59,8 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
     free(fraction);
     return made;
   }
-  
-//determine the sign of the fixedpoint value to be created
+
+  //determine the sign of the fixedpoint value to be created
   if (hex[starting_point] == '-') {
     made.valid_negative = true;
     made.valid_nonnegative = false;
@@ -68,14 +71,16 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
   }
 
   int is_digit;
-  int i = 0;
-//check if whole part of hex has 16 or less valid hex digits, create error fixedpoint if not
-  while (hex[i + starting_point] != '.') {
-    is_digit = isxdigit(hex[i + starting_point]);
-    if (i > 15 || is_digit == 0) {
+  unsigned int i = 0;
+  
+  //check if whole part of hex has 16 or less valid hex digits, create error fixedpoint if not
+  while (i < 17) {
+    if (hex[i + starting_point] == '.') {
+      break;
+    } else if ((i + starting_point) == strlen(hex)) {
       made.integer1 = strtoul(whole, NULL, 16);
       made.integer2 = 0;
-      made.error = true;
+      made.error = false;
       made.positive_overflow = false;
       made.negative_overflow = false;
       made.positive_underflow = false;
@@ -83,18 +88,41 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
       free(whole);
       free(fraction);
       return made;
+    } else {
+      if (i < 16) {
+	is_digit = isxdigit(hex[i + starting_point]);
+      } else {
+	is_digit = 0;
+      }
+      if (is_digit == 0) {
+	made.integer1 = strtoul(whole, NULL, 16);
+	made.integer2 = 0;
+	made.error = true;
+	made.positive_overflow = false;
+	made.negative_overflow = false;
+	made.positive_underflow = false;
+	made.negative_underflow = false;
+	free(whole);
+	free(fraction);
+	return made;
+      }
+      
+      whole[i] = hex[i + starting_point];
+      i++;
+      
     }
-    whole[i] = hex[i + starting_point];
-    i++; 
   }
+
   
   i++;
-
-//convert the whole part hex digits to a numeric value and store it
+  
+  //convert the whole part hex digits to a numeric value and store it
   made.integer1 = strtoul(whole, NULL, 16);
 
-//if the fraction part of the hex string is longer than 16 hex digits, create an error fixedpoint 
+  //if the fraction part of the hex string is longer than 16 hex digits, create an error fixedpoint
   int size = strlen(hex) - (i + starting_point);
+
+  
   if (size > 16) {
     made.integer2 = 1;
     made.error = true;
@@ -106,13 +134,16 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
     free(fraction);
     return made;
   }
-  //if the fraction part of the hex string has invalid hex digits, create an error fixedpoint 
+
+  //if the fraction part of the hex string has invalid hex digits, create an error fixedpoint
   for (int j = 0; j < 16; j++) {
-    //pad with zeros if fraction part is less than 16 digits	  
+    //pad with zeros if fraction part is less than 16 digits
     if (j >= size) {
       fraction[j] = '0';
     } else {
+
       is_digit = isxdigit(hex[j + i + starting_point]);
+
       if (is_digit == 0) {
 	made.integer2 = 1;
 	made.error = true;
@@ -126,18 +157,19 @@ Fixedpoint fixedpoint_create_from_hex(const char *hex) {
       }
       
       fraction[j] = hex[j + i + starting_point];
+
     }
   }
-	
+
   //convert the fraction part hex digits to a numeric value and store it
   made.integer2 = strtoul(fraction, NULL, 16);
 
-//zero fixedpoint case
+  //zero fixedpoint case
   if (made.integer1 == 0 && made.integer2 == 0) {
     made.valid_negative = false;
     made.valid_nonnegative = true;
   }
-	
+
   made.error = false;
   made.positive_overflow = false;
   made.negative_overflow = false;
@@ -211,6 +243,23 @@ Fixedpoint fixedpoint_add(Fixedpoint left, Fixedpoint right) {
   
   return made;
 }
+
+
+/*
+Fixedpoint sub_both_nonnegative(Fixedpoint left, Fixedpoint right) {
+  uint64_t frac_result;
+  uint64_t whole_result;
+
+  if ()
+
+
+  
+
+  return fixedpoint_create2(whole_result, frac_result);
+}
+
+
+*/
 
 Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
   Fixedpoint made;
@@ -286,13 +335,42 @@ Fixedpoint fixedpoint_sub(Fixedpoint left, Fixedpoint right) {
     
     //add when positive left operand and negative right operand 
   } else if (left.valid_nonnegative && right.valid_negative) {
-    return fixedpoint_add(left, fixedpoint_negate(right));
+    frac_result = left.integer2 + right.integer2;
+    whole_result = left.integer1 + right.integer1;
+    if (frac_result < left.integer2) {
+      whole_result++;
+    }
+    if (whole_result < left.integer1) {
+      made.positive_overflow = true;
+      made.negative_overflow = false;
+    }
+    made.valid_nonnegative = true;
+    made.valid_negative = false;
+    made.integer1 = whole_result;
+    made.integer2 = frac_result;
+    made.positive_underflow = false;
+    made.negative_underflow = false;
+    
+    return made;
         
     //add as nonnegatives and negate result when negative left operand and positive right operand 
   } else if (left.valid_negative && right.valid_nonnegative) {
-    
-    return fixedpoint_add(left, fixedpoint_negate(right));
-	  
+    frac_result = left.integer2 + right.integer2;
+    whole_result = left.integer1 + right.integer1;
+    if (frac_result < left.integer2) {
+      whole_result++;
+    }
+    if (whole_result < left.integer1) {
+      made.negative_overflow = true;
+      made.positive_overflow = false;
+    }
+    made.valid_negative = true;
+    made.valid_nonnegative = false;
+    made.integer1 = whole_result;
+    made.integer2 = frac_result;
+    made.positive_underflow = false;
+    made.negative_underflow = false;
+    return made;
     //both operands negative
   } else {
     
@@ -390,6 +468,10 @@ Fixedpoint fixedpoint_double(Fixedpoint val) {
   Fixedpoint made;
   uint64_t max = 9223372036854775808;
   
+  //double
+  made.integer1 = val.integer1 << 1;
+  made.integer2 = val.integer2 << 1;
+
   //if whole part is bigger than can be represented, overflow occurs
   if (val.integer1 >= max) {
     made.integer1 = 0;
@@ -401,23 +483,22 @@ Fixedpoint fixedpoint_double(Fixedpoint val) {
       made.negative_overflow = true;
       made.positive_overflow = false;
     }
-    made.valid_nonnegative = true;
+    made.valid_nonnegative = false;
     made.valid_negative = false;
     made.error = false;
     made.positive_underflow = false;
-    made.negative_underflow = false;    
+    made.negative_underflow = false;
     return made;
   }
 
-  //double
-  made.integer1 = val.integer1 << 1;
-  made.integer2 = val.integer2 << 1;
-	
+
   //carry
   if (val.integer2 >= max) {
     made.integer1++;
   }
-  
+
+
+
   //determine sign
   if (val.valid_nonnegative) {
     made.valid_nonnegative = true;
@@ -427,12 +508,13 @@ Fixedpoint fixedpoint_double(Fixedpoint val) {
     made.valid_nonnegative = false;
   }
 
+
   made.positive_overflow = false;
   made.negative_overflow = false;
   made.positive_underflow = false;
   made.negative_underflow = false;
-  
   return made;
+  
 }
 
 int fixedpoint_compare(Fixedpoint left, Fixedpoint right) {

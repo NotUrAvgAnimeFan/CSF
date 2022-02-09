@@ -13,7 +13,8 @@ typedef struct {
   Fixedpoint large2;
   Fixedpoint max;
 
-  // TODO: add more objects to the test fixture
+  Fixedpoint min;
+  Fixedpoint neg_min;
 
 } TestObjs;
 
@@ -62,6 +63,7 @@ int main(int argc, char **argv) {
   TEST(test_is_overflow_pos);
   TEST(test_is_err);
 
+  
   TEST(test_simple_addition);
   TEST(test_simple_subtraction);
   TEST(test_simple_doubling);
@@ -72,6 +74,8 @@ int main(int argc, char **argv) {
   TEST(test_is_overflow_neg);
   TEST(test_is_underflow_pos);
   TEST(test_is_underflow_neg);
+    
+
   // IMPORTANT: if you add additional test functions (which you should!),
   // make sure they are included here.  E.g., if you add a test function
   // "my_awesome_tests", you should add
@@ -93,7 +97,8 @@ TestObjs *setup(void) {
   objs->large1 = fixedpoint_create2(0x4b19efceaUL, 0xec9a1e2418UL);
   objs->large2 = fixedpoint_create2(0xfcbf3d5UL, 0x4d1a23c24fafUL);
   objs->max = fixedpoint_create2(0xFFFFFFFFFFFFFFFFUL, 0xFFFFFFFFFFFFFFFFUL);
-
+  objs->min = fixedpoint_create_from_hex("0.0000000000000001");
+  objs->neg_min = fixedpoint_create_from_hex("-0.0000000000000001");
   return objs;
 }
 
@@ -538,7 +543,13 @@ void test_create_more_from_hex(TestObjs *objs) {
   result = fixedpoint_create_from_hex(".");
   ASSERT(fixedpoint_is_err(result));
 
+  result = fixedpoint_create_from_hex("..");
+  ASSERT(fixedpoint_is_err(result));
+  
   result = fixedpoint_create_from_hex("-");
+  ASSERT(fixedpoint_is_err(result));
+
+  result = fixedpoint_create_from_hex("--");
   ASSERT(fixedpoint_is_err(result));
 
   result = fixedpoint_create_from_hex("-0.0");
@@ -547,6 +558,13 @@ void test_create_more_from_hex(TestObjs *objs) {
 
   result = fixedpoint_create_from_hex("");
   ASSERT(fixedpoint_is_err(result));
+
+  result = fixedpoint_create_from_hex("aaaaaaaaaaaaaaaa");
+  ASSERT(!(fixedpoint_is_err(result)));
+
+  result = fixedpoint_create_from_hex("aaaaaaaaaaaaaaaaa");
+  ASSERT(fixedpoint_is_err(result));
+
   
   
 }
@@ -602,7 +620,7 @@ void test_compare(TestObjs *objs) {
 
 void test_is_overflow_neg(TestObjs *objs) {
   
-  Fixedpoint value1, value2, diff, sum, doub;
+  Fixedpoint value1, value2, diff;
   
   value1 = fixedpoint_create_from_hex("-ffffffffffffffff");
   
@@ -619,25 +637,33 @@ void test_is_overflow_neg(TestObjs *objs) {
   value1 = fixedpoint_create_from_hex("80000000000000000");
   value2 = fixedpoint_create_from_hex("90000000000000000");
   
-  /*
-  Fixedpoint negative_one = fixedpoint_negate(objs->one);
-  sum = fixedpoint_add(value1, negative_one);
-  ASSERT(fixedpoint_is_overflow_neg(sum));
-  
-  doub = fixedpoint_double(value1);
-  ASSERT(fixedpoint_is_overflow_neg(doub));
-  */
 }
 
 void test_is_underflow_pos(TestObjs *objs) {
-  (void) objs;
+  Fixedpoint value1, result;
+
+
+  result = fixedpoint_halve(objs->min);
+  ASSERT(fixedpoint_is_underflow_pos(result));
+
+  value1 = fixedpoint_create_from_hex("0.123400000000000f");
+  result = fixedpoint_halve(value1);
+  ASSERT(fixedpoint_is_underflow_pos(result)); 
 
   
 }
 
-void test_is_underflow_neg(TestObjs *objs){ 
-  (void) objs;
+void test_is_underflow_neg(TestObjs *objs){   
+  Fixedpoint value1, result;
 
+  result = fixedpoint_halve(objs->neg_min);
+  ASSERT(fixedpoint_is_underflow_neg(result));
+
+  value1 = fixedpoint_create_from_hex("-0.123400000000000f");
+  ASSERT(fixedpoint_is_neg(value1));
+
+  result = fixedpoint_halve(value1);
+  ASSERT(fixedpoint_is_underflow_neg(result));
   
-
+  
 }
