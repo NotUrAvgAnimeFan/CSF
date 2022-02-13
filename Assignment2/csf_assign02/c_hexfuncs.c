@@ -3,8 +3,6 @@
 #include <unistd.h>  // this is the only system header file you may include!
 #include "hexfuncs.h"
 
-// TODO: add function implementations here
-
 unsigned hex_read(char data_buf[]) {
   unsigned bytes_read = read(0, data_buf, 16);
 
