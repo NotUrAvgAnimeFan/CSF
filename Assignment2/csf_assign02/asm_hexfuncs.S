@@ -30,7 +30,34 @@
 
 		movl %rdi, %eax
 		decq %eax
-
+		
+		jmp .LcheckCond
+	
+	.Ltop:
+		movl %rbx, %rsi
+		sarl $4, %rbx
+		shll $4, %rbx
+		movl %rsi, %esi
+		subl %rbx, %esi
+		
+		cmp $10, %esi
+		jge .LelsePart
+		
+		jmp .Lout	
+	.LelsePart:
+	
+	.Lout:
+		sarl $4, %rbx
+		decq %eax
+		
+	
+		
+	.LcheckCond:
+		cmpl $0, %eax
+		jge .Ltop
+		
+		ret
+		
 	
 	
 	hex_format_byte_as_hex:	
@@ -43,11 +70,11 @@
 
 	.LloopTop:
 		inc al
-		inc %eax
+		incl %eax
 	
 	.LfirstCond:
 		cmpl %rax, %eax
-		jl. LtestReturn
+		jl .LtestReturn
 		cmpl %rbx, al
 		je .LloopTop
 	
