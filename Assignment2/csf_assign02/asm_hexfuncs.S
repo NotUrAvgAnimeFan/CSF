@@ -13,9 +13,15 @@
 	
 	
 	/* TODO: add functions here */
+		.globl hex_read
 
+		.globl hex_write_string
+
+		.globl hex_format_offset
+		
+		.globl string_size
+	
 		.globl format_as_hex_variable_string_size
-
 	
 		.globl hex_format_byte_as_hex
 
@@ -64,7 +70,7 @@
 		popq %rbx
 		mov al,0x00
 		movl $0, %eax
-		movl $255, %rax
+		movl $256, %rax
 
 		jmp .LfirstCond
 
@@ -87,33 +93,35 @@
 	
 	hex_to_printable:
 	
-		popq %rbx 
-		mov al,0x20
-		movl $32, %eax
-		movl $127, %rax
+		popq %rbx
+		movb %r12b, %rbx
+		movb %r13b,0x20
+		movl $32, %r10
+		movl $127, %r11
 
 	
 		jmp .LfirstCond
 	
 	.LloopTop:
 
-		inc al
-		inc %eax
+		incb al
+		incl %r10
 
 	
 	.LfirstCond:
-		cmpl %rax, %eax
+		cmpl %r11, %r10
 		jl .LchangeToDot
-		cmpl %rbx,al
+		cmpb %r12b, %r13b
 		je .LloopTop
+		movl %r10, %rax
 
+	
 	.LtestReturn:
-		push %eax
 		ret
 	
 	.LchangeToDot:
 		
-		movl $46, %eax
+		movl $46, %rax
 		call .LtestReturn
 
 	
