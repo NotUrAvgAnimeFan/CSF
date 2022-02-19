@@ -64,17 +64,11 @@ void hex_format_byte_as_hex(unsigned char byteval, char sbuf[]) {
 }
 
 char hex_to_printable(unsigned char byteval) {
-  int counter = 32;
-  char compare = ' ';
-  while (counter < 127 && compare != byteval) {
-    counter++;
-    compare++;
-  }
 
-  if (counter > 126) {
+  if (byteval < 32 || byteval > 127) {
     return 46;
   }
 
-  return counter;
+  return byteval;
   
 }
