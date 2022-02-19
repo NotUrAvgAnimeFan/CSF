@@ -67,17 +67,19 @@
 	
 	*/
 	hex_format_byte_as_hex:
-		movq %rdi, %r11
-		movq $1, %rbx
+		movq %rdi, %r13
+		movq $2, %rbx
+		movq $0, (%rsi, %rbx, 1)
+		decq %rbx
 		jmp .LfirstCond
 
 	.LfirstCond:
 		shr $4, %rdi
 		shl $4, %rdi
 
-		subq %rdi, %r11
+		subq %rdi, %r13
 
-		cmp $10, %r11
+		cmp $10, %r13
 
 		jl .ConvertLess10
 	
@@ -85,31 +87,34 @@
 
 	.ConvertLess10:
 		movq $48, %r12
-		addq %r11, %r12
+		addq %r13, %r12
 
-		movq %r12, (%rsi, %rbx, $1)
-		cmpq %rbx, $0
+		movq %r12, (%rsi, %rbx, 1)
+		cmpq $0, %rbx
 		je .LtestReturn
 		shr $4, %rdi
-		moveq %rdi, %r11
+		movq %rdi, %r13
 		decq %rbx
 		jmp .LfirstCond
 
 	.ConvertGreater10:
 	
 		movq $97, %r12
-		subq $10, %r11
-		addq %r11, %r12
-		movq %r12, (%rsi, %rbx, $1)
-		cmpq %rbx, $0
+		subq $10, %r13
+		addq %r13, %r12
+		movq %r12, (%rsi, %rbx, 1)
+		cmpq $0, %rbx
 		je .LtestReturn
 		shr $4, %rdi
-		moveq %rdi, %r11
+		movq %rdi, %r13
 		decq %rbx
 		jmp .LfirstCond
 		
 	.LtestReturn:
-		movq %rsi, %rax
+		//incq %rbx
+		//movq $56, (%rsi, %rbx, 1)
+		//incq %rbx
+		//movq $0, (%rsi, %rbx, 1)
 		ret
 	
 	
