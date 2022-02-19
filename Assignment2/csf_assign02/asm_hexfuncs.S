@@ -65,32 +65,54 @@
 		ret
 		
 	
-	
-	hex_format_byte_as_hex:	
-		popq %bl
-		movb %al, 0x00
-		movq $0, %rcx
-		movq $256, %rax
-
+	*/
+	hex_format_byte_as_hex:
+		movq %rdi, %r11
+		movq $1, %rbx
 		jmp .LfirstCond
 
-	.LloopTop:
-		incb %al
-		incq %rcx
-	
 	.LfirstCond:
-		cmpq %rax, %rcx
-		jl .LtestReturn
-		cmpb %bl, %al
-		je .LloopTop
+		shr $4, %rdi
+		shl $4, %rdi
+
+		subq %rdi, %r11
+
+		cmp $10, %r11
+
+		jl .ConvertLess10
 	
+		jge .ConvertGreater10
+
+	.ConvertLess10:
+		movq $48, %r12
+		addq %r11, %r12
+
+		movq %r12, (%rsi, %rbx, $1)
+		cmpq %rbx, $0
+		je .LtestReturn
+		shr $4, %rdi
+		moveq %rdi, %r11
+		decq %rbx
+		jmp .LfirstCond
+
+	.ConvertGreater10:
+	
+		movq $97, %r12
+		subq $10, %r11
+		addq %r11, %r12
+		movq %r12, (%rsi, %rbx, $1)
+		cmpq %rbx, $0
+		je .LtestReturn
+		shr $4, %rdi
+		moveq %rdi, %r11
+		decq %rbx
+		jmp .LfirstCond
+		
 	.LtestReturn:
-		push %rcx
-		push $2
-		call format_as_hex_variable_string_size
+		movq %rsi, %rax
 		ret
 	
-	*/
+	
 	hex_to_printable:
 		movq $32, %r10
 		movq $127, %r11
