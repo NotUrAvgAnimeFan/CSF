@@ -66,59 +66,52 @@
 		
 	
 	*/
+	
 	hex_format_byte_as_hex:
-		movq %rdi, %r13
+		subq $8, %rsp
 		movq $2, %rbx
 		movq $0, (%rsi, %rbx, 1)
 		decq %rbx
 		jmp .LfirstCond
 
 	.LfirstCond:
-		shr $4, %rdi
-		shl $4, %rdi
 
-		subq %rdi, %r13
-
-		cmp $10, %r13
-
-		jl .ConvertLess10
-	
-		jge .ConvertGreater10
-
-	.ConvertLess10:
-		movq $48, %r12
-		addq %r13, %r12
-
-		movq %r12, (%rsi, %rbx, 1)
 		cmpq $0, %rbx
-		je .LtestReturn
-		shr $4, %rdi
-		movq %rdi, %r13
+		jge .Ltop
+		addq $8, %rsp
+		ret
+
+	.Ltop:
+		movq %rdi, %r11
+	
+		shrq $4, %rdi
+		shlq $4, %rdi
+
+		subq %rdi, %r11
+
+		cmp $10, %r11
+
+		jge .ConvertGreater10
+		addq $48, %r11
+		movq %r11, (%rsi, %rbx, 1) 
+
+		jmp .Lout
+
+	.Lout:
+		shrq $4, %rdi
 		decq %rbx
 		jmp .LfirstCond
 
 	.ConvertGreater10:
 	
-		movq $97, %r12
-		subq $10, %r13
-		addq %r13, %r12
-		movq %r12, (%rsi, %rbx, 1)
-		cmpq $0, %rbx
-		je .LtestReturn
-		shr $4, %rdi
-		movq %rdi, %r13
-		decq %rbx
-		jmp .LfirstCond
-		
-	.LtestReturn:
-		//incq %rbx
-		//movq $56, (%rsi, %rbx, 1)
-		//incq %rbx
-		//movq $0, (%rsi, %rbx, 1)
-		ret
+		subq $10, %r11
+		addq $97, %r11
+		movq %r11, (%rsi, %rbx, 1)
+		jmp .Lout
 	
 	
 	hex_to_printable:
+		subq $8, %rsp
 		movq $32, %r10
 		movq $127, %r11
 
@@ -136,6 +129,7 @@
 
 	
 	.PrintableReturn:
+		addq $8, %rsp
 		ret
 	
 	.LchangeToDot:
