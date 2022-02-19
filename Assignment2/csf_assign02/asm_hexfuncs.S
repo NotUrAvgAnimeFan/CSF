@@ -29,7 +29,7 @@
 
 	
 
-
+	/*
 	format_as_hex_variable_string_size:	
 		popq %rdi
 		popq %rbx
@@ -67,62 +67,54 @@
 	
 	
 	hex_format_byte_as_hex:	
-		popq %rbx
-		mov al,0x00
-		movl $0, %eax
-		movl $256, %rax
+		popq %bl
+		movb %al, 0x00
+		movq $0, %rcx
+		movq $256, %rax
 
 		jmp .LfirstCond
 
 	.LloopTop:
-		inc al
-		incl %eax
+		incb %al
+		incq %rcx
 	
 	.LfirstCond:
-		cmpl %rax, %eax
+		cmpq %rax, %rcx
 		jl .LtestReturn
-		cmpl %rbx, al
+		cmpb %bl, %al
 		je .LloopTop
 	
 	.LtestReturn:
-		push %eax
+		push %rcx
 		push $2
 		call format_as_hex_variable_string_size
 		ret
 	
-	
+	*/
 	hex_to_printable:
-	
-		popq %rbx
-		movb %r12b, %rbx
-		movb %r13b,0x20
-		movl $32, %r10
-		movl $127, %r11
+		movq $32, %r10
+		movq $127, %r11
 
 	
-		jmp .LfirstCond
-	
-	.LloopTop:
+		jmp .PrintablefirstCond
 
-		incb al
-		incl %r10
-
-	
-	.LfirstCond:
-		cmpl %r11, %r10
+	.PrintablefirstCond:
+		cmpq %r10, %rdi
 		jl .LchangeToDot
-		cmpb %r12b, %r13b
-		je .LloopTop
-		movl %r10, %rax
+	
+	.PrintablesecondCond:
+		cmpq %r11, %rdi
+		jg .LchangeToDot
+		movq %rdi, %rax
 
 	
-	.LtestReturn:
+	.PrintableReturn:
 		ret
 	
 	.LchangeToDot:
 		
-		movl $46, %rax
-		call .LtestReturn
+		movq $46, %rax
+		jmp .PrintableReturn
 
 	
 	
