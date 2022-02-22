@@ -14,7 +14,7 @@ int main(void) {
   char_read = hex_read(data_buf);
 
   while (char_read > 0) {
-    
+    //print the position in the input as hexadecimal number
     hex_format_offset(offset, offset_buf);
     offset_buf[8] = ':';
     offset_buf[9] = ' ';
@@ -23,7 +23,8 @@ int main(void) {
     
     int i;
     int complete_counter = 0;
-  
+    
+    //for each character, add hex representation of their ASCII value and a space to the final string
     for (i = 0; i < char_read; i++) {
       single_conversion[0] = data_buf[i];
       hex_format_byte_as_hex(single_conversion[0], single_conversion);
@@ -35,26 +36,25 @@ int main(void) {
       complete_counter += 3;
       
     }
-
+    //add spacing between ASCII hex representation and string-like representation as necessary
     while (complete_counter < 49) {
       complete_hex_output[complete_counter++] = ' ';
     }
-    
     complete_hex_output[complete_counter] = '\0';
     
+    //print the final string
     hex_write_string(complete_hex_output);
-
+   
+    //form and print string-like representation
     for (int j = 0; j < char_read; j++) {
       data_buf[j] = hex_to_printable(data_buf[j]);
     }
     data_buf[char_read] = '\n';
     data_buf[char_read + 1] = '\0';
-
-
-    
     hex_write_string(data_buf);
-    offset += 16;
     
+    //move onto next 16 bytes
+    offset += 16;
     char_read = hex_read(data_buf);
   }
   
