@@ -56,16 +56,6 @@ void format_as_hex_variable_string_size(int size, unsigned offset, char sbuf[]) 
 
 void hex_format_byte_as_hex(unsigned char byteval, char sbuf[]) {
   
-  /*
-  char comparison = '\0';
-  int counter = 0;
-  while (counter < 255 && comparison != byteval) {
-    comparison++;
-    counter++;
-  }
-  format_as_hex_variable_string_size(2, counter, sbuf);
-  */
-  
   format_as_hex_variable_string_size(2, byteval, sbuf);
 
 }
