@@ -36,10 +36,13 @@ void format_as_hex_variable_string_size(int size, unsigned offset, char sbuf[]) 
   unsigned offsetCopy;
   int difference;
   while (charCounter >= 0) {
+    //isolate 4 bits
     offsetCopy = offset;
     offset = offset >> 4;
     offset = offset << 4;
     difference = offsetCopy - offset;
+    
+    //figure out the hex digit and add it to the string
     if (difference < 10) {
       sbuf[charCounter] = '0' + difference;
     } else {
@@ -52,19 +55,23 @@ void format_as_hex_variable_string_size(int size, unsigned offset, char sbuf[]) 
 }
 
 void hex_format_byte_as_hex(unsigned char byteval, char sbuf[]) {
+  
+  /*
   char comparison = '\0';
   int counter = 0;
   while (counter < 255 && comparison != byteval) {
     comparison++;
     counter++;
   }
-  
   format_as_hex_variable_string_size(2, counter, sbuf);
+  */
+  
+  format_as_hex_variable_string_size(2, byteval, sbuf);
 
 }
 
 char hex_to_printable(unsigned char byteval) {
-
+  //'.' for non-printable characters
   if (byteval < 32 || byteval > 127) {
     return 46;
   }
