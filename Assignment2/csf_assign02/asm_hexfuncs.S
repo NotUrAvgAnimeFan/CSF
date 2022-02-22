@@ -28,7 +28,8 @@
 		.globl hex_to_printable
 
 	
-
+	hex_format_offset:	
+	ret
 	/*
 	format_as_hex_variable_string_size:	
 		popq %rdi
