@@ -68,45 +68,41 @@
 	*/
 	
 	hex_format_byte_as_hex:
-		subq $8, %rsp
-		movq $2, %rbx
-		movq $0, (%rsi, %rbx, 1)
-		decq %rbx
+		movq $2, %rax	
+		movb $0, (%rsi, %rax, 1)
+		decq %rax
 		jmp .LfirstCond
 
 	.LfirstCond:
 
-		cmpq $0, %rbx
+		cmpq $0, %rax
 		jge .Ltop
-		addq $8, %rsp
 		ret
 
 	.Ltop:
-		movq %rdi, %r11
-	
+		movb %dil, %r11b
 		shrq $4, %rdi
 		shlq $4, %rdi
 
-		subq %rdi, %r11
+		subb %dil, %r11b
 
-		cmp $10, %r11
+		cmpb $10, %r11b
 
 		jge .ConvertGreater10
-		addq $48, %r11
-		movq %r11, (%rsi, %rbx, 1) 
-
+		addb $48, %r11b
+		movb %r11b, (%rsi, %rax, 1)
 		jmp .Lout
 
 	.Lout:
 		shrq $4, %rdi
-		decq %rbx
+		decq %rax
 		jmp .LfirstCond
 
 	.ConvertGreater10:
 	
-		subq $10, %r11
-		addq $97, %r11
-		movq %r11, (%rsi, %rbx, 1)
+		subb $10, %r11b
+		addb $97, %r11b
+		movb %r11b, (%rsi, %rax, 1)
 		jmp .Lout
 	
 	
