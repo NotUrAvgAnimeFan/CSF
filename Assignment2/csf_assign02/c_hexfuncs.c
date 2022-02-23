@@ -1,4 +1,10 @@
+
 // C implementation of hexdump functions
+
+// Ricardo Manuel Morales Gonzalez  rmorale5@jhu.edu
+// Ana Kuri  auri1@jhu.edu
+
+
 
 #include <unistd.h>  // this is the only system header file you may include!
 #include "hexfuncs.h"
@@ -21,7 +27,6 @@ int string_size(const char s[]) {
     i++;
   }
 
-  i++;
   return i;
 }
 
@@ -68,4 +73,47 @@ char hex_to_printable(unsigned char byteval) {
 
   return byteval;
   
+}
+
+
+void correct_offset_formatting(int offset, char offset_buf[]) {
+  hex_format_offset(offset, offset_buf);
+  offset_buf[8] = ':';
+  offset_buf[9] = ' ';
+  offset_buf[10] = '\0';
+  hex_write_string(offset_buf);
+}
+
+
+void full_hex_representation_printed(int complete_counter, int chars_in_data_buf, char data_buf[], char single_conversion[], char complete_hex_output[]) {
+  //for each character, add hex representation of their ASCII value and a space to the final string
+  for (int i = 0; i < chars_in_data_buf; i++) {
+    single_conversion[0] = data_buf[i];
+    hex_format_byte_as_hex(single_conversion[0], single_conversion);
+    single_conversion[2] = ' ';
+
+    for (int j = 0; j < 3; j++) {
+      complete_hex_output[complete_counter + j] = single_conversion[j];
+    }
+    complete_counter +=3;
+  }
+
+  //add spacing between ASCII hex representation and string-like representation as necessary
+  while (complete_counter < 49) {
+    complete_hex_output[complete_counter++] = ' ';
+  }
+  complete_hex_output[complete_counter] = '\0';
+  
+  //print the final string
+  hex_write_string(complete_hex_output);
+}
+
+
+void complete_string_printed(int chars_in_data_buf, char data_buf[]) {
+  for (int j = 0; j < chars_in_data_buf; j++) {
+    data_buf[j] = hex_to_printable(data_buf[j]);
+  }
+  data_buf[chars_in_data_buf] = '\n';
+  data_buf[chars_in_data_buf + 1] = '\0';
+  hex_write_string(data_buf);
 }

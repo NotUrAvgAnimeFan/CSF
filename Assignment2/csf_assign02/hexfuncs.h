@@ -1,5 +1,8 @@
 // Function prototypes for hexdump functions
 // Do not change these!
+// Ricardo Manuel Morales Gonzalez  rmorale5@jhu.edu
+// Ana Kuri  auri1@jhu.edu
+
 
 #ifndef HEXFUNCS_H
 #define HEXFUNCS_H
@@ -34,5 +37,14 @@ int string_size(const char s[]);
 // Converts offset to hex and stores it in the desired space in sbuf
 void format_as_hex_variable_string_size(int size, unsigned offset, char sbuf[]);
 
+
+// prints out the correct offset with formatting
+void correct_offset_formatting(int offset, char offset_buf[]);
+
+// calculates and prints out the full hex representation of current 16 char string
+void full_hex_representation_printed(int complete_counter, int chars_in_data_buf, char data_buf[], char single_conversion[], char complete_hex_output[]);
+
+// prints out the literal string being currently converted into hex representation
+void complete_string_printed(int chars_in_data_buf, char data_buf[]);
 
 #endif // HEXFUNCS_H

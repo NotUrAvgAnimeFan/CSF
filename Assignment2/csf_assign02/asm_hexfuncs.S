@@ -1,3 +1,6 @@
+// Ricardo Manuel Morales Gonzalez  rmorale5@jhu.edu
+// Ana Kuri  auri1@jhu.edu
+
 /* Assembly language implementation of hexdump functions */
 
 	.section .rodata
@@ -29,7 +32,7 @@
 
 	
 	hex_format_offset:	
-	ret
+	ret 
 	/*
 	format_as_hex_variable_string_size:	
 		popq %rdi
@@ -69,38 +72,47 @@
 	*/
 	
 	hex_format_byte_as_hex:
-		movq $2, %rax	
+		// sets backwards counter for inserting chars in buf[]
+		movq $2, %rax
+		// puts null pointer at buf[2] marking end of hex code
 		movb $0, (%rsi, %rax, 1)
 		decq %rax
 		jmp .LfirstCond
 
 	.LfirstCond:
-
+	// cheks to make sure final character in hex hasn't already
+	// been put in buf if so return
 		cmpq $0, %rax
 		jge .Ltop
 		ret
 
 	.Ltop:
+	// makes a copy of %rdi but byte sized and shifts bits
 		movb %dil, %r11b
 		shrq $4, %rdi
 		shlq $4, %rdi
 
+	// checks to see what hex character to put in %rax index of buf
 		subb %dil, %r11b
 
 		cmpb $10, %r11b
 
+	// if difference greater than 10 an appropriate hex character[a-f] will be
+	// put in buf and like wise if less than 10 [0-9]
 		jge .ConvertGreater10
 		addb $48, %r11b
 		movb %r11b, (%rsi, %rax, 1)
 		jmp .Lout
 
 	.Lout:
+	//shifts bits in %rdi to make calculations for what hex character to put in buf
 		shrq $4, %rdi
 		decq %rax
 		jmp .LfirstCond
 
 	.ConvertGreater10:
-	
+	// adds difference in %r11b to int corresponding to ascii for 0 so that
+	// the appropriate character goes into its proper index in buf
 		subb $10, %r11b
 		addb $97, %r11b
 		movb %r11b, (%rsi, %rax, 1)
@@ -108,29 +120,40 @@
 	
 	
 	hex_to_printable:
+	// variables for comparison are set up
 		subq $8, %rsp
 		movq $32, %r10
 		movq $127, %r11
 
-	
+	// jumps to first condition
 		jmp .PrintablefirstCond
 
 	.PrintablefirstCond:
+	// compares the values in %r10 and %rdi and if
+	// %rdi is less than lowest possible printable value
+	// then the int ascii for '.' is put in %rax and returned
 		cmpq %r10, %rdi
 		jl .LchangeToDot
 	
 	.PrintablesecondCond:
+	// compares the values in %r10 and %rdi and if
+	// %rdi is greater than the greatest possible printable value
+	// then the int ascii for '.' is put in %rax and returned
 		cmpq %r11, %rdi
 		jg .LchangeToDot
+	// if all else passes then the original %rdi is within the
+	// acceptable range and thus put in %rax to be returned next
 		movq %rdi, %rax
 
 	
 	.PrintableReturn:
+	// if all else passes then the value in %rax is returned
 		addq $8, %rsp
 		ret
 	
 	.LchangeToDot:
-		
+	// %rax will now have the int ascii for '.' and will be returned
+	// via .PrintableReturn
 		movq $46, %rax
 		jmp .PrintableReturn
 

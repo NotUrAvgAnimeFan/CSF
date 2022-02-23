@@ -2,6 +2,10 @@
 // These tests should work for both your C implementations and your
 // assembly language implementations
 
+// Ricardo Manuel Morales Gonzalez  rmorale5@jhu.edu
+// Ana Kuri  auri1@jhu.edu
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "tctest.h"
