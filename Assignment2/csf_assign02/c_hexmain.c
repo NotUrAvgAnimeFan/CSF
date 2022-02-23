@@ -62,7 +62,7 @@ int main(void) {
       
     }
     //add spacing between ASCII hex representation and string-like representation as necessary
-    while (complete_counter < 49) {
+    while (complete_counter < 50) {
       complete_hex_output[complete_counter++] = ' ';
     }
     complete_hex_output[complete_counter] = '\0';
