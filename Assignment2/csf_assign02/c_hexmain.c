@@ -24,10 +24,12 @@ int main(void) {
     for (chars_in_data_buf = 0; chars_in_data_buf < how_many_overflow; chars_in_data_buf++) {
       data_buf[chars_in_data_buf] = buf_overflow[chars_in_data_buf];
     }
+    
+    how_many_overflow = 0;
 
     do {
       char_read = hex_read(hex_read_buf);
-      for (z = 0; z < char_read && chars_in_data_buf < 17; z++) {
+      for (z = 0; z < char_read && (chars_in_data_buf + z) < 16; z++) {
 	data_buf[chars_in_data_buf + z] = hex_read_buf[z];
       }
       chars_in_data_buf += z;
