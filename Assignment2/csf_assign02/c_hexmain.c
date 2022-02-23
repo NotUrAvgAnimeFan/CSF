@@ -36,7 +36,7 @@ int main(void) {
       for (z = z; z < char_read; z++) {
 	buf_overflow[how_many_overflow++] = hex_read_buf[z];
       }
-    } while (chars_in_data_buf < 17 && char_read > 0);
+    } while (chars_in_data_buf < 16 && char_read > 0);
 
 
 
