@@ -30,9 +30,74 @@
 
 		.globl hex_to_printable
 
+
+	string_size:
+		subq $8, %rsp
+		movq $0, %rax
+		movq $0, %r10
+	
+	.SizeFirstFunc:
+		cmpq (%rdi), %r10	
+		je .SizeReturn
+		incq %rax
+		addq $1, %rdi
+		jmp .SizeFirstFunc
+		
+	.SizeReturn:
+		addq $8, %rsp
+		ret
+
 	
 	hex_format_offset:	
-	ret 
+
+		// sets backwards counter for inserting chars in buf[]
+		movq $8, %rax
+		// puts null pointer at buf[2] marking end of hex code
+		movb $0, (%rsi, %rax, 1)
+		decq %rax
+		jmp .OffsetfirstCond
+
+	.OffsetfirstCond:
+	// cheks to make sure final character in hex hasn't already
+	// been put in buf if so return
+		cmpq $0, %rax
+		jge .Offsettop
+		ret
+
+	.Offsettop:
+	// makes a copy of %rdi but byte sized and shifts bits
+		movb %dil, %r11b
+		shrq $4, %rdi
+		shlq $4, %rdi
+
+	// checks to see what hex character to put in %rax index of buf
+		subb %dil, %r11b
+
+		cmpb $10, %r11b
+
+	// if difference greater than 10 an appropriate hex character[a-f] will be
+	// put in buf and like wise if less than 10 [0-9]
+		jge .OffsetGreater10
+		addb $48, %r11b
+		movb %r11b, (%rsi, %rax, 1)
+		jmp .Lout
+
+	.Offsetout:
+	//shifts bits in %rdi to make calculations for what hex character to put in buf
+		shrq $4, %rdi
+		decq %rax
+		jmp .OffsetfirstCond
+
+	.OffsetGreater10:
+	// adds difference in %r11b to int corresponding to ascii for 0 so that
+	// the appropriate character goes into its proper index in buf
+		subb $10, %r11b
+		addb $97, %r11b
+		movb %r11b, (%rsi, %rax, 1)
+		jmp .Offsetout
+
+
+	
 	/*
 	format_as_hex_variable_string_size:	
 		popq %rdi
