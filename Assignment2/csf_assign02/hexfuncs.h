@@ -1,7 +1,8 @@
+
 // Function prototypes for hexdump functions
 // Do not change these!
 // Ricardo Manuel Morales Gonzalez  rmorale5@jhu.edu
-// Ana Kuri  auri1@jhu.edu
+// Ana Kuri  akuri1@jhu.edu
 
 
 #ifndef HEXFUNCS_H
