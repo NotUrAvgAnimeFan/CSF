@@ -31,6 +31,13 @@
 		.globl hex_to_printable
 
 
+	hex_read:	
+		subq $8, %rsp
+		movq $0, %rax
+	
+	//found an article online on how to read files
+	//https://www.tutorialspoint.com/assembly_programming/assembly_file_management.htm
+
 	string_size:
 		subq $8, %rsp
 		movq $0, %rax
