@@ -16,6 +16,7 @@ typedef struct {
   char test_data_1[16];
   char test_data_2[16];
   char test_data_3[16];
+  char test_data_4[16];
 } TestObjs;
 
 // setup function (to create the test fixture)
@@ -24,6 +25,7 @@ TestObjs *setup(void) {
   strcpy(objs->test_data_1, "Hello, world!\n");
   strcpy(objs->test_data_2, "This sample\n");
   strcpy(objs->test_data_3, "CSF program\0");
+  strcpy(objs->test_data_4, "\0");
   return objs;
 }
 
@@ -41,7 +43,7 @@ void testMoreFormatOffset(TestObjs *objs);
 void testMoreFormatByteAsHex(TestObjs *objs);
 void testMoreHexToPrintable(TestObjs *objs);
 
-
+void testStringSizeFunction(TestObjs *objs);
 
 
 
@@ -60,6 +62,7 @@ int main(int argc, char **argv) {
   TEST(testMoreFormatByteAsHex);
   TEST(testMoreHexToPrintable);
 
+  TEST(testStringSizeFunction);
   
   TEST_FINI();
 
@@ -139,5 +142,20 @@ void testMoreHexToPrintable(TestObjs *objs) {
   ASSERT('S' == hex_to_printable(objs->test_data_3[1]));
   ASSERT('F' == hex_to_printable(objs->test_data_3[2]));
   ASSERT('.' == hex_to_printable(objs->test_data_3[11]));
+
+}
+
+void testStringSizeFunction(TestObjs *objs) {
+  int expected;
+  int actual;
+
+  expected = strlen(objs->test_data_3);
+  actual = string_size(objs->test_data_3);
+  ASSERT(expected == actual);
+
+  expected = strlen(objs->test_data_4);
+  actual = string_size(objs->test_data_4);
+  ASSERT(expected == actual);
+ 
 
 }
