@@ -17,10 +17,10 @@ main:
 	subq $16, %rsp
 	movq %rsp, %r10 // r10 is bufoverflow
 
-	subq $18, %rsp
+	subq $24, %rsp
 	movq %rsp, %r11 // r11 is data_buf array
 
-	subq $11, %rsp
+	subq $16, %rsp
 	movq %rsp, %r12 // offset_buf
 	
 	movq $0, %r8 //offset counter
@@ -98,11 +98,11 @@ main:
 	movl $0, %r15d // int j
 		
 	pushq %r8 // temporarily put offset counter into stack
-	subq $3, %rsp // create space for 3 bit conversion array
+	subq $8, %rsp // create space for 3 bit conversion array
 	movq %rsp, %r8 // pointer to 3 bit conversion stack now in r8 
 
 	pushq %r12 // temporarily put offset_buff pointer into stack
-	subq $49, %rsp // create space for 49 bit complete output to print
+	subq $52, %rsp // create space for 49 bit complete output to print
 	movq %rsp, %r12 // pointer to complete output to print
 	
 	.full_hex_representation_start:
@@ -139,10 +139,10 @@ main:
 	movq %r12, %rdi
 	call hex_write_string
 
-	addq $49, %rsp
+	addq $52, %rsp
 	popq %r12
 
-	addq $3, %rsp
+	addq $8, %rsp
 	popq %r8
 
 	movl $0, %r14d // int i
@@ -175,10 +175,10 @@ main:
 	jg .LqueuedCharsCondition
 	
 	.LReturn:
-	addq $11, %rsp
-	addq $18, %rsp
 	addq $16, %rsp
-	addq $15, %rsp
+	addq $24, %rsp
+	addq $16, %rsp
+	addq $16, %rsp
 	addq $8, %rsp
 	ret
 
