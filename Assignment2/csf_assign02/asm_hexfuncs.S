@@ -47,6 +47,8 @@
 		//number of bytes to read
 		movq $16, %edx
 
+		int 0x80
+		
 		addq $8, %rsp
 		ret
 	//found an article online on how to read files
@@ -69,6 +71,8 @@
 		//use string size as number of bytes to write
 		call string_size
 		movq %rax, %edx
+
+		int 0x80
 	
 		addq $8, %rsp
 		ret
