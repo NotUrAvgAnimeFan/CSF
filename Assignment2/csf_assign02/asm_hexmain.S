@@ -27,12 +27,16 @@ main:
 	
 	
 	
-	.jmp .LqueuedCharsCondition
+	jmp .LqueuedCharsCondition
 	
 
 	//put queued chars into data_buf
 	.LqueuedCharsLoop:
-	movb (%r10, %ebx, 1), (%r11, %ebx, 1)
+
+	//movb (%r10, %rbx, 1), (%r11, %rbx, 1)
+	pushq (%r10, %rbx, 1)
+	popq (%r11, %rbx, 1)
+	
 	incl %ebx
 
 	.LqueuedCharsCondition:
@@ -58,7 +62,9 @@ main:
 	addl %ecx, %edx
 	cmpl $16, %edx
 	jge .After
-	movb (%r9, %ecx, 1), (%r11, %edx, 1)
+	//movb (%r9, %ecx, 1), (%r11, %edx, 1)
+	pushq (%r9, %rcx, 1)
+	popq (%r11, %rdx, 1)
 	incl %ecx
 	jmp .LmoveToDataBuf
 
@@ -68,12 +74,14 @@ main:
 	.LputInOverflow:
 	cmpl %ecx, %eax
 	jle .AfterOverflow
-	movb (%r9, %ecx, 1), (%10, %ebp, 1)
+	//movb (%r9, %ecx, 1), (%10, %ebp, 1)
+	pushq (%r9, %rcx, 1)
+	popq (%r10, %rbp, 1)
 	incl %ebp
 	incl %ecx
 	jmp .LputInOverflow
 	
-	.AfterOVerflow:
+	.AfterOverflow:
 	cmpl $16, %ebx
 	jge .printing
 	cmpl $0, %eax
@@ -83,19 +91,24 @@ main:
 	
 	.printing:
 	cmpl $0, %ebx
-	jle .something //place holder
+	jle .checkingBiggestLoop //place holder
 	movq %r8, %rdi
 	movq %r12, %rsi
 	call hex_format_offset
-	movq $58, (%r12, $8, 1)
-	movq $32, (%r12, $9, 1)
-	movq $0, (%r12, $10, 1)
+	pushq %r8
+	movq $8, %r8
+	movq $58, (%r12, %r8, 1)
+	movq $9, %r8
+	movq $32, (%r12, %r8, 1)
+	movq $10, %r8
+	movq $0, (%r12, %r8, 1)
+	popq %r8
 	movq %r12, %rdi
 	call hex_write_string
 
-	movl $0, %r13d //complete counter
-	movl $0, %r14d // int i
-	movl $0, %r15d // int j
+	movq $0, %r13 //complete counter
+	movq $0, %r14 // int i
+	movq $0, %r15 // int j
 		
 	pushq %r8 // temporarily put offset counter into stack
 	subq $8, %rsp // create space for 3 bit conversion array
@@ -108,34 +121,44 @@ main:
 	.full_hex_representation_start:
 	cmpl %ebx, %r14d
 	jge .end_full_hex
-	movb (%r11, %r14d, 1), (%r8, $0, 1)
+	//movb (%r11, %r14d, 1), (%r8, $0, 1)
+	pushq %r15
+	pushq (%r11, %r14, 1)
+	movq $0, %r15
+	popq (%r8, %r15, 1)
 	movq $0, %rdi
-	movb (%r8, $0, 1), %dil
+	movb (%r8, %r15, 1), %dil
+	popq %r15
 	movq %r8, %rsi
 	call hex_format_byte_as_hex
-	movb $32, (%r8, $2, 1)
-
+	pushq %r15
+	movq $2, %r15
+	movb $32, (%r8, %r15, 1)
+	popq %r15
+	
 	.full_hex_inner:
-	cmpl $3, %r15d
+	cmpq $3, %r15
 	jge .after_inner
-	movb (%r8, %r15d, 1), (%r12, %r13d, 1)
-	incl %r13d
-	incl %r15d
+	//movb (%r8, %r15, 1), (%r12, %r13, 1)
+	pushq (%r8, %r15, 1)
+	popq (%r12, %r13, 1)
+	incq %r13
+	incq %r15
 	jmp .full_hex_inner //loop back
 
 	.after_inner:
-	movl $0, %r15d
+	movq $0, %r15
 	jmp .full_hex_representation_start // loop back to beginning of loop
 
 	.end_full_hex:
-	cmpl $49, %r13d
+	cmpq $49, %r13
 	jge .print_entire_hex_output
-	movb $32, (%r12, %r13d, 1)
-	incl %r13d
+	movb $32, (%r12, %r13, 1)
+	incq %r13
 	jmp .end_full_hex
 
 	.print_entire_hex_output:
-	movb $0, (%r12, %r13d, 1)
+	movb $0, (%r12, %r13, 1)
 	movq %r12, %rdi
 	call hex_write_string
 
@@ -145,23 +168,23 @@ main:
 	addq $8, %rsp
 	popq %r8
 
-	movl $0, %r14d // int i
+	movq $0, %r14 // int i
 
 	.read_string_printed:
 	cmpl %ebx, %r14d
 	jge .end_read_string_printed
 	
 	movq $0, %rdi
-	movb (%r11, %r14d, 1), %dil
+	movb (%r11, %r14, 1), %dil
 	call hex_to_printable
-	movb %al, (%r11, %r14d, 1)
-	incl %14d
-	jmp .read_string_printed:
+	movb %al, (%r11, %r14, 1)
+	incq %r14
+	jmp .read_string_printed
 
-	.ended_read_string_printed:
-	movb $10, (%r11, %r14d, 1)
-	incl $r14d
-	movb $0, (%r11, %r14d, 1)
+	.end_read_string_printed:
+	movb $10, (%r11, %r14, 1)
+	incq %r14
+	movb $0, (%r11, %r14, 1)
 	
 	movq %r11, %rdi
 	
@@ -170,8 +193,10 @@ main:
 	addq $16, %r8
 	movl $0, %ebx
 
+	.checkingBiggestLoop:
 	popq %rax
-	cmpl $0, %eax
+	
+	cmpq $0, %rax
 	jg .LqueuedCharsCondition
 	
 	.LReturn:
