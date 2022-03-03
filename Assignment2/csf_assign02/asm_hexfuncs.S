@@ -33,47 +33,27 @@
 
 	hex_read:	
 		subq $8, %rsp
-		movq $0, %rax
+		leaq 0(%rdi), %rsi
+		movq $0, %rdi
+		movq $16, %rdx
 
-		//sys_read()
-		movq $3, %eax
-
-		//file descriptor to read from stdin
-		movq $0, %ebx
-
-		//pointer to input buffer
-		movq %rdi, %ecx
-
-		//number of bytes to read
-		movq $16, %edx
-
-		int 0x80
+		call read
 		
 		addq $8, %rsp
 		ret
-	//found an article online on how to read files
-	//https://www.tutorialspoint.com/assembly_programming/assembly_file_management.htm
-
 
 	hex_write_string:
+		
 		subq $8, %rsp
-		movq $0, %rax
 
-		//sys_write()
-		movq $4, %eax
-
-		//file descriptor for stdout
-		movq $1, %ebx
-	
-		//pointer to output buffer
-		movq %rdi, %ecx
-
-		//use string size as number of bytes to write
+		//call string_size
+		movq %rdi, %rsi
+		movq $1, %rdi
 		call string_size
-		movq %rax, %edx
+		movq %rax, %rdx
 
-		int 0x80
-	
+		call write
+		
 		addq $8, %rsp
 		ret
 	
