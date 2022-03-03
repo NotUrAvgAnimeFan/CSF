@@ -24,8 +24,17 @@ main:
 	*/
 	// above this line is example code
 	
-	subq $8, %rsp // align stack
+	
+	pushq %rbx
+	pushq %rsp
+	pushq %rbp
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
 
+	subq $8, %rsp // align stack
+	
 	movl $0, %ebx   //chars_in_data_buf
 	movl $0, %ebp   //how_many_overflow
 
@@ -322,10 +331,10 @@ main:
 	movl $0, %ebx //sets chars_in_data_buf to 0
 	
 	popq %rax // we now have original value of chars read
-	popq %rax
 	
 	///////////////////////////////////////////// code breaks here
 	.checkingBiggestLoop:
+	popq %rax
 	cmpq $0, %rax // compare char_read & 0
 	jg .LqueuedCharsCondition // if char_read greater than 0 then jump
 	
@@ -337,6 +346,14 @@ main:
 	addq $16, %rsp
 	addq $8, %rsp
 	
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rbp
+	popq %rsp
+	popq %rbx	
+
 	ret
 	
 	
