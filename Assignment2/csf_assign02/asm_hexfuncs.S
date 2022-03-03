@@ -45,11 +45,12 @@
 	hex_write_string:
 		
 		subq $8, %rsp
-
-		//call string_size
+		pushq %rdi
+		call string_size
+		popq %rdi
 		movq %rdi, %rsi
 		movq $1, %rdi
-		call string_size
+		//call string_size
 		movq %rax, %rdx
 
 		call write
@@ -61,13 +62,14 @@
 	string_size:
 		subq $8, %rsp
 		movq $0, %rax
-		movq $0, %r10
+		movb $0, %cl
+		movb $0, %dl
 	
 	.SizeFirstFunc:
-		cmpq (%rdi), %r10	
+		movb (%rdi, %rax, 1), %cl
+		cmpb %cl, %dl	
 		je .SizeReturn
 		incq %rax
-		addq $1, %rdi
 		jmp .SizeFirstFunc
 		
 	.SizeReturn:
