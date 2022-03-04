@@ -15,7 +15,6 @@
 	.section .text
 	
 	
-	/* TODO: add functions here */
 		.globl hex_read
 
 		.globl hex_write_string
@@ -24,56 +23,54 @@
 		
 		.globl string_size
 	
-		.globl format_as_hex_variable_string_size
-	
 		.globl hex_format_byte_as_hex
 
 		.globl hex_to_printable
 
 
-	hex_read:	
-		subq $8, %rsp
-		leaq 0(%rdi), %rsi
-		movq $0, %rdi
-		movq $16, %rdx
-
-		call read
+	hex_read:
 		
-		addq $8, %rsp
+		subq $8, %rsp //align stack
+		leaq 0(%rdi), %rsi //move start of buffer into %rsi
+		movq $0, %rdi // %rdi is 0 so read will read from stdin
+		movq $16, %rdx // read will read up to 16 bites
+
+		call read // read function is called
+		
+		addq $8, %rsp //align stack
 		ret
 
 	hex_write_string:
 		
-		subq $8, %rsp
-		pushq %rdi
-		call string_size
-		popq %rdi
-		movq %rdi, %rsi
-		movq $1, %rdi
-		//call string_size
-		movq %rax, %rdx
+		subq $8, %rsp // align stack
+		pushq %rdi // saves buffer in stack
+		call string_size // gets size of string in %rdi
+		popq %rdi // gets intact buffer to write from stack
+		movq %rdi, %rsi // moves buffer to %rsi
+		movq $1, %rdi // %rdi gets 1 so write will write to stdout
+		movq %rax, %rdx //string size is now in %rax so whole string will print out
 
-		call write
+		call write // write function is called
 		
-		addq $8, %rsp
+		addq $8, %rsp // stack alignment
 		ret
 	
 
 	string_size:
-		subq $8, %rsp
-		movq $0, %rax
-		movb $0, %cl
-		movb $0, %dl
+		subq $8, %rsp // stack alignment
+		movq $0, %rax // counter of how many chars in string
+		movb $0, %cl // used to store value of buffer[i]
+		movb $0, %dl // used for comparison and indicates presence of null character
 	
 	.SizeFirstFunc:
-		movb (%rdi, %rax, 1), %cl
-		cmpb %cl, %dl	
-		je .SizeReturn
-		incq %rax
-		jmp .SizeFirstFunc
+		movb (%rdi, %rax, 1), %cl // buffer[i] now in %cl
+		cmpb %cl, %dl	//compares buffer[i] to '\0'
+		je .SizeReturn // if buffer[i] == '\0' jump to SizeReturn
+		incq %rax // if no jump move to the next index in buffer
+		jmp .SizeFirstFunc // loop back to SizeFirstFunc
 		
 	.SizeReturn:
-		addq $8, %rsp
+		addq $8, %rsp // stack alignment
 		ret
 
 	

@@ -34,14 +34,24 @@ int main(void) {
 
     //continually gets chars from standard input
     do {
+      // char_read stores the number of bites read from stdin and string
+      // now in hex_read buf
       char_read = hex_read(hex_read_buf);
+
+      //puts chars from hex_read_buf into data_buf until no more space
       for (z = 0; z < char_read && (chars_in_data_buf + z) < 16; z++) {
 	data_buf[chars_in_data_buf + z] = hex_read_buf[z];
       }
+
+      //adds added characters to total chars_in_data_buf
       chars_in_data_buf += z;
+
+      //characters not placed in data_buf get put in buf_overflow to be
+      //queued and put into data_buf on next iteration of main
       for (z = z; z < char_read; z++) {
 	buf_overflow[how_many_overflow++] = hex_read_buf[z];
       }
+      
     } while (chars_in_data_buf < 16 && char_read > 0);
 
 
@@ -53,7 +63,6 @@ int main(void) {
       correct_offset_formatting(offset, offset_buf);
 
       
-      //int i;
       int complete_counter = 0;
 
       //full hex representation of string will be calculated and printed
@@ -66,8 +75,8 @@ int main(void) {
       
       //move onto next 16 bytes
       offset += 16;
+
       
-      //char_read = hex_read(data_buf);
       chars_in_data_buf = 0;
     }
 

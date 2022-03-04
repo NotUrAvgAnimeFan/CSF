@@ -16,14 +16,17 @@ unsigned hex_read(char data_buf[]) {
 }
 
 void hex_write_string(const char s[]) {
+
+  // stdin is read and chars is stored in s
+  int value = write(1, s, string_size(s));
+  (void)value;
   
- int value = write(1, s, string_size(s));
- (void)value;
 }
 
 int string_size(const char s[]) {
   int i = 0;
 
+  // counts number of characters until null terminator reached
   while (s[i] != '\0') {
     i++;
   }
@@ -94,9 +97,9 @@ void full_hex_representation_printed(int complete_counter, int chars_in_data_buf
     single_conversion[2] = ' ';
 
     for (int j = 0; j < 3; j++) {
-      complete_hex_output[complete_counter + j] = single_conversion[j]; // can be written as complete_counter++
+      complete_hex_output[complete_counter++] = single_conversion[j];
     }
-    complete_counter +=3;
+    
   }
 
   //add spacing between ASCII hex representation and string-like representation as necessary

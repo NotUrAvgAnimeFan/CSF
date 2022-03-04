@@ -142,7 +142,8 @@ void testMoreHexToPrintable(TestObjs *objs) {
   ASSERT('S' == hex_to_printable(objs->test_data_3[1]));
   ASSERT('F' == hex_to_printable(objs->test_data_3[2]));
   ASSERT('.' == hex_to_printable(objs->test_data_3[11]));
-
+  ASSERT('.' == hex_to_printable(objs->test_data_4[1]));
+  
 }
 
 void testStringSizeFunction(TestObjs *objs) {

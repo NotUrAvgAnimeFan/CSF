@@ -1,336 +1,337 @@
-
+// Ricardo Manuel Morales Gonzalez  RMORALE5
+// Ana Kuri  AKURI1	
 /* Hexdump main function, assembly language version */
 
 	.section .text
 
-	.globl main
-main:
-	/* TODO: add your code here */
-	//pushing for when we need original values at return
-	pushq %rbx
-	pushq %rsp
-	pushq %rbp
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
+		.globl main
 
-	subq $8, %rsp // align stack
-	
-	movl $0, %ebx   //chars_in_data_buf
-	movl $0, %ebp   //how_many_overflow
+	main:
+		//pushing for when we need original values at return
+		pushq %rbx
+		pushq %rsp
+		pushq %rbp
+		pushq %r12
+		pushq %r13
+		pushq %r14
+		pushq %r15
 
-	subq $16, %rsp
-	movq %rsp, %r9 // r9 is hex_read_buf
+		subq $8, %rsp // align stack
 	
-	subq $16, %rsp
-	movq %rsp, %r10 // r10 is bufoverflow
+		movl $0, %ebx   //chars_in_data_buf
+		movl $0, %ebp   //how_many_overflow
 
-	subq $32, %rsp
-	movq %rsp, %r11 // r11 is data_buf array
+		subq $16, %rsp
+		movq %rsp, %r9 // r9 is hex_read_buf
+	
+		subq $16, %rsp
+		movq %rsp, %r10 // r10 is bufoverflow
 
-	subq $16, %rsp
-	movq %rsp, %r12 // offset_buf
+		subq $32, %rsp
+		movq %rsp, %r11 // r11 is data_buf array
+
+		subq $16, %rsp
+		movq %rsp, %r12 // offset_buf
 	
-	movq $0, %r8 //offset counter
+		movq $0, %r8 //offset counter
 	
 	
-	jmp .LqueuedCharsCondition
+		jmp .LqueuedCharsCondition
 	
 
 	//put queued chars into data_buf
 	.LqueuedCharsLoop:
 
-	movb (%r10, %rbx, 1), %r13b
-	movb %r13b, (%r11, %rbx, 1)
+		movb (%r10, %rbx, 1), %r13b
+		movb %r13b, (%r11, %rbx, 1)
 	
-	incl %ebx
+		incl %ebx
 
 	.LqueuedCharsCondition:
-	cmpl %ebp, %ebx // compares chars in data buf & how many overflow
-	jl .LqueuedCharsLoop // if chars in data buf less than how many overflow then jump
+		cmpl %ebp, %ebx // compares chars in data buf & how many overflow
+		jl .LqueuedCharsLoop // if chars in data buf less than how many overflow then jump
 	
-	movl $0, %ebp // how_many_overflow set to zero
+		movl $0, %ebp // how_many_overflow set to zero
 
 	.LreadInput:
-	//continually gets chars from standard input
+		//continually gets chars from standard input
 	
-	movq %r9, %rdi //hex_read_buf as first argument for hex_read call
+		movq %r9, %rdi //hex_read_buf as first argument for hex_read call
 
-	//saves all caller-saved variables so that function call doesn't affect them
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
+		//saves all caller-saved variables so that function call doesn't affect them
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
 	
-	call hex_read
+		call hex_read
 
-	//caller-saved variables back to their respective places
-	popq %r11 // is back
-	popq %r10
-	popq %r9
-	popq %r8
+		//caller-saved variables back to their respective places
+		popq %r11 // is back
+		popq %r10
+		popq %r9
+		popq %r8
 
 	
-	movl $0, %ecx // z variable in c_hexmain acts as counter
-	movl $0, %edx // used to temporarily store and compute comparisons
+		movl $0, %ecx // z variable in c_hexmain acts as counter
+		movl $0, %edx // used to temporarily store and compute comparisons
 
-	pushq %rax // pushes num_chars_read to the stack for safekeeping
+		pushq %rax // pushes num_chars_read to the stack for safekeeping
 	
 	.LmoveToDataBuf:
-	cmpl %eax, %ecx // z < chars read
-	jge .After //if z is greater or equal to chars read then jump
-	movq %rbx, %rdx // chars_in_data_buf now in %rdx
-	addq %rcx, %rdx // add z to chars_in_data_buf and store in %rdx
-	cmpq $16, %rdx // chars_in_data_buf + z < 16
-	jge .After // if chars_in_data_buf + z greater than or equal to 16 jump
+		cmpl %eax, %ecx // z < chars read
+		jge .After //if z is greater or equal to chars read then jump
+		movq %rbx, %rdx // chars_in_data_buf now in %rdx
+		addq %rcx, %rdx // add z to chars_in_data_buf and store in %rdx
+		cmpq $16, %rdx // chars_in_data_buf + z < 16
+		jge .After // if chars_in_data_buf + z greater than or equal to 16 jump
 	
-	movb (%r9, %rcx, 1), %r13b //hex_read_buf[z] now in %r13b
-	movb %r13b, (%r11, %rdx, 1)  // hex_read_buf[z] now in data_buf[chars_in_data_buf + z]
-
-	incl %ecx // increase z counter
-	jmp .LmoveToDataBuf
+		movb (%r9, %rcx, 1), %r13b //hex_read_buf[z] now in %r13b
+		movb %r13b, (%r11, %rdx, 1)  // hex_read_buf[z] now in data_buf[chars_in_data_buf + z]
+	
+		incl %ecx // increase z counter
+		jmp .LmoveToDataBuf
 
 	.After:
-	addl %ecx, %ebx // chars_in_data_buf += z
+		addl %ecx, %ebx // chars_in_data_buf += z
 
 	.LputInOverflow:
-	cmpl %ecx, %eax // char_read <= z
-	jge .AfterOverflow // if chars read greater than or equal to z then jump
-	movb (%r9, %rcx, 1), %r13b // hex_read_buf[z] now in %r13b
-	movb %r13b, (%r10, %rbp, 1) // hex_read_buf[z] now in buf_overflow[how_many_overflow]
+		cmpl %ecx, %eax // char_read <= z
+		jge .AfterOverflow // if chars read greater than or equal to z then jump
+		movb (%r9, %rcx, 1), %r13b // hex_read_buf[z] now in %r13b
+		movb %r13b, (%r10, %rbp, 1) // hex_read_buf[z] now in buf_overflow[how_many_overflow]
 	
-	incl %ebp //how_many_overflow += 1
-	incl %ecx // z += 1
-	jmp .LputInOverflow
+		incl %ebp //how_many_overflow += 1
+		incl %ecx // z += 1
+		jmp .LputInOverflow
 	
 	.AfterOverflow:
-	cmpl $16, %ebx // compare chars_in_data_buf & 16
-	jge .printing // if chars_in_data_buf >= 16 jump
-	cmpl $0, %eax // compares char_read & 0
-	jle .printing // if char_read <= 0 jump
-	jmp .LreadInput // if all else passes loop back to LreadInput
+		cmpl $16, %ebx // compare chars_in_data_buf & 16
+		jge .printing // if chars_in_data_buf >= 16 jump
+		cmpl $0, %eax // compares char_read & 0
+		jle .printing // if char_read <= 0 jump
+		jmp .LreadInput // if all else passes loop back to LreadInput
 
 	
 	.printing:
-	cmpl $0, %ebx // compare chars_in_data_buf & 0
-	jle .LReturn //if chars_in_data_buf <= 0 then jump
-	movq %r8, %rdi // offset counter now in %rdi
-	movq %r12, %rsi // offset_buf now in %rsi
+		cmpl $0, %ebx // compare chars_in_data_buf & 0
+		jle .LReturn //if chars_in_data_buf <= 0 then jump
+		movq %r8, %rdi // offset counter now in %rdi
+		movq %r12, %rsi // offset_buf now in %rsi
 
-	pushq %rax
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
+		pushq %rax
+		pushq %rcx
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
 
-	call hex_format_offset 
+		call hex_format_offset 
 
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rcx
-	popq %rax
+		popq %r11
+		popq %r10
+		popq %r9
+		popq %r8
+		popq %rcx
+		popq %rax
 	
-	pushq %r8 // push offset_counter into stack for saving and we are now free to temporarily
-		  // for arithmetic
-	movq $8, %r8
-	movb $58, (%r12, %r8, 1) // offset_buf[8] = ':'
-	incq %r8
-	movb $32, (%r12, %r8, 1) // offset_buf[9] = ' '
-	incq %r8
-	movb $0, (%r12, %r8, 1) // offset_buf[10] = '\0'
-	popq %r8 // offset counter now back in %r8
-	movq %r12, %rdi //move offset_buf into %rdi for function call
+		pushq %r8 // push offset_counter into stack for saving and we are now free to temporarily
+			  // for arithmetic
+		movq $8, %r8
+		movb $58, (%r12, %r8, 1) // offset_buf[8] = ':'
+		incq %r8
+		movb $32, (%r12, %r8, 1) // offset_buf[9] = ' '
+		incq %r8
+		movb $0, (%r12, %r8, 1) // offset_buf[10] = '\0'
+		popq %r8 // offset counter now back in %r8
+		movq %r12, %rdi //move offset_buf into %rdi for function call
 
-	pushq %rax
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
+		pushq %rax
+		pushq %rcx
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
 	
-	call hex_write_string // code breaks here
+		call hex_write_string // code breaks here
 	
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rcx
-	popq %rax
+		popq %r11
+		popq %r10
+		popq %r9
+		popq %r8
+		popq %rcx
+		popq %rax
 	
-	movq $0, %r13 //complete counter
-	movq $0, %r14 // int i
-	movq $0, %r15 // int j
+		movq $0, %r13 //complete counter
+		movq $0, %r14 // int i
+		movq $0, %r15 // int j
 		
-	pushq %r8 // temporarily put offset counter into stack
-	subq $8, %rsp // create space for 3 bit conversion array
-	movq %rsp, %r8 // pointer to 3 bit conversion stack now in r8 
+		pushq %r8 // temporarily put offset counter into stack
+		subq $8, %rsp // create space for 3 bit conversion array
+		movq %rsp, %r8 // pointer to 3 bit conversion stack now in r8 
 
-	pushq %r12 // temporarily put offset_buff pointer into stack
-	subq $52, %rsp // create space for 49 bit complete output to print
-	movq %rsp, %r12 // pointer to complete output to print
+		pushq %r12 // temporarily put offset_buff pointer into stack
+		subq $52, %rsp // create space for 49 bit complete output to print
+		movq %rsp, %r12 // pointer to complete output to print
 	
 	.full_hex_representation_start:
-	cmpl %ebx, %r14d // comparison between chars in data buf & int i
-	jge .end_full_hex // if int i >= chars in data buf jump
+		cmpl %ebx, %r14d // comparison between chars in data buf & int i
+		jge .end_full_hex // if int i >= chars in data buf jump
 	
-	pushq %r15
-	movb (%r11, %r14, 1), %cl // data_buf[i] now in %cl
+		pushq %r15
+		movb (%r11, %r14, 1), %cl // data_buf[i] now in %cl
 	
-	movq $0, %r15
-	movb %cl, (%r8, %r15, 1) // data_buf[i] now in single_conversion[0]
+		movq $0, %r15
+		movb %cl, (%r8, %r15, 1) // data_buf[i] now in single_conversion[0]
 	
-	movq $0, %rdi // clears anything that could have been in %rdi
-	movb (%r8, %r15, 1), %dil // hex_format_byte_as_hex first argument
-	movq %r8, %rsi // conversion array hex_format_byte_as_hex second argument
+		movq $0, %rdi // clears anything that could have been in %rdi
+		movb (%r8, %r15, 1), %dil // hex_format_byte_as_hex first argument
+		movq %r8, %rsi // conversion array hex_format_byte_as_hex second argument
 
-	pushq %rax
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
+		pushq %rax
+		pushq %rcx
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
 
-	call hex_format_byte_as_hex
+		call hex_format_byte_as_hex
 
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rcx
-	popq %rax
-	
-	movq $2, %r15
-	movb $32, (%r8, %r15, 1) // puts space after 2 hex digits
-	popq %r15
-	
+		popq %r11
+		popq %r10
+		popq %r9
+		popq %r8
+		popq %rcx
+		popq %rax
+
+		movq $2, %r15
+		movb $32, (%r8, %r15, 1) // puts space after 2 hex digits
+		popq %r15
+
 	.full_hex_inner:
-	cmpq $3, %r15 // compare j with 3
-	jge .after_inner // if j >= 3 jump
-	movb (%r8, %r15, 1), %cl // single conversion[j] now in %cl
-	movb %cl, (%r12, %r13, 1) // single conversion[j] now in complete_hex_output[complete_counter + 1]
-	incq %r13
-	incq %r15
-	jmp .full_hex_inner //loop back
+		cmpq $3, %r15 // compare j with 3
+		jge .after_inner // if j >= 3 jump
+		movb (%r8, %r15, 1), %cl // single conversion[j] now in %cl
+		movb %cl, (%r12, %r13, 1) // single conversion[j] now in complete_hex_output[complete_counter + 1]
+		incq %r13
+		incq %r15
+		jmp .full_hex_inner //loop back
 
 	.after_inner:
-	movq $0, %r15 // sets j back to 0
-	incq %r14 // increments i
-	jmp .full_hex_representation_start // loop back to beginning of loop
+		movq $0, %r15 // sets j back to 0
+		incq %r14 // increments i
+		jmp .full_hex_representation_start // loop back to beginning of loop
 
 	.end_full_hex:
-	cmpq $49, %r13 // compares complete_counter & 49
-	jge .print_entire_hex_output // if complete_counter >= 49 jump
-	movb $32, (%r12, %r13, 1) // complete_hex_output[complete_counter] = ' '
-	incq %r13 // complete counter += 1
-	jmp .end_full_hex
+		cmpq $49, %r13 // compares complete_counter & 49
+		jge .print_entire_hex_output // if complete_counter >= 49 jump
+		movb $32, (%r12, %r13, 1) // complete_hex_output[complete_counter] = ' '
+		incq %r13 // complete counter += 1
+		jmp .end_full_hex
 
 	.print_entire_hex_output:
-	movb $0, (%r12, %r13, 1) // complete_hex_output[complete_counter] = '\0' a.k.a. null terminating
-	movq %r12, %rdi // moves complete_hex_output array into function first argument
+		movb $0, (%r12, %r13, 1) // complete_hex_output[complete_counter] = '\0' a.k.a. null terminating
+		movq %r12, %rdi // moves complete_hex_output array into function first argument
 
-	pushq %rax
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	
-	call hex_write_string
+		pushq %rax
+		pushq %rcx
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
 
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rcx
-	popq %rax
-	
-	addq $52, %rsp // get rid of stack memory for complete_output array
-	popq %r12 // %r12  is now offset buf aggain
+		call hex_write_string
 
-	addq $8, %rsp // gets rid of single conversion memory in stack
-	popq %r8 // %r8 is offset counter again
+		popq %r11
+		popq %r10
+		popq %r9
+		popq %r8
+		popq %rcx
+		popq %rax
 
-	movq $0, %r14 // int i
+		addq $52, %rsp // get rid of stack memory for complete_output array
+		popq %r12 // %r12  is now offset buf aggain
+
+		addq $8, %rsp // gets rid of single conversion memory in stack
+		popq %r8 // %r8 is offset counter again
+
+		movq $0, %r14 // int i
 
 	.read_string_printed: //  prints the original inputted, slight formatting
-	cmpl %ebx, %r14d // compares chars_in_data_buf & i
-	jge .end_read_string_printed // if i >= chars_in_data_buf jump
-	
-	movq $0, %rdi // clear everything that might have been in %rdi
-	movb (%r11, %r14, 1), %dil // put data_buf[i] into %rdi
+		cmpl %ebx, %r14d // compares chars_in_data_buf & i
+		jge .end_read_string_printed // if i >= chars_in_data_buf jump
 
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
+		movq $0, %rdi // clear everything that might have been in %rdi
+		movb (%r11, %r14, 1), %dil // put data_buf[i] into %rdi
 
-	call hex_to_printable //hex_to_printable(data_buf[i])
-	
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rcx
+		pushq %rcx
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
 
-	//data_buf[i] = hex_to_printable(data_buf[i])
-	movb %al, (%r11, %r14, 1) // puts converted char into its correct spot in original string
-	incq %r14 // i += 1
-	jmp .read_string_printed
+		call hex_to_printable //hex_to_printable(data_buf[i])
+
+		popq %r11
+		popq %r10
+		popq %r9
+		popq %r8
+		popq %rcx
+
+		//data_buf[i] = hex_to_printable(data_buf[i])
+		movb %al, (%r11, %r14, 1) // puts converted char into its correct spot in original string
+		incq %r14 // i += 1
+		jmp .read_string_printed
 
 	.end_read_string_printed:
-	movb $10, (%r11, %r14, 1) // puts new line character at data_buf[chars_in_data_buf]
-	incq %r14
-	movb $0, (%r11, %r14, 1) // puts null terminator at data_buf[chars_in_data_buf + 1]
-	
-	movq %r11, %rdi // moves string to print to %rdi
+		movb $10, (%r11, %r14, 1) // puts new line character at data_buf[chars_in_data_buf]
+		incq %r14
+		movb $0, (%r11, %r14, 1) // puts null terminator at data_buf[chars_in_data_buf + 1]
 
-	pushq %rax
-	pushq %rcx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	
-	call hex_write_string
+		movq %r11, %rdi // moves string to print to %rdi
 
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rcx
-	popq %rax
-	
-	addq $16, %r8 // adds 16 to offset counter
-	movl $0, %ebx //sets chars_in_data_buf to 0
+		pushq %rax
+		pushq %rcx
+		pushq %r8
+		pushq %r9
+		pushq %r10
+		pushq %r11
+
+		call hex_write_string
+
+		popq %r11
+		popq %r10
+		popq %r9
+		popq %r8
+		popq %rcx
+		popq %rax
+
+		addq $16, %r8 // adds 16 to offset counter
+		movl $0, %ebx //sets chars_in_data_buf to 0
 	
 	.checkingBiggestLoop:
-	popq %rax // we now have original value of chars read
-	cmpq $0, %rax // compare char_read & 0
-	jg .LqueuedCharsCondition // if char_read greater than 0 then jump
-	
+		popq %rax // we now have original value of chars read
+		cmpq $0, %rax // compare char_read & 0
+		jg .LqueuedCharsCondition // if char_read greater than 0 then jump
+
 	.LReturn:
-	popq %rax
-	addq $16, %rsp
-	addq $32, %rsp
-	addq $16, %rsp
-	addq $16, %rsp
-	addq $8, %rsp
-	
-	popq %r15
-	popq %r14
-	popq %r13
-	popq %r12
-	popq %rbp
-	popq %rsp
-	popq %rbx	
-	movq $0, %rax
-	ret
-	
+		popq %rax
+		addq $16, %rsp
+		addq $32, %rsp
+		addq $16, %rsp
+		addq $16, %rsp
+		addq $8, %rsp
+
+		popq %r15
+		popq %r14
+		popq %r13
+		popq %r12
+		popq %rbp
+		popq %rsp
+		popq %rbx	
+		movq $0, %rax
+		ret
+
 	
 	
 	
