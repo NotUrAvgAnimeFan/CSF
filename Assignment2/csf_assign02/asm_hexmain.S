@@ -330,16 +330,13 @@ main:
 	addq $16, %r8 // adds 16 to offset counter
 	movl $0, %ebx //sets chars_in_data_buf to 0
 	
-	popq %rax // we now have original value of chars read
-	
-	///////////////////////////////////////////// code breaks here
 	.checkingBiggestLoop:
-	popq %rax
+	popq %rax // we now have original value of chars read
 	cmpq $0, %rax // compare char_read & 0
 	jg .LqueuedCharsCondition // if char_read greater than 0 then jump
 	
 	.LReturn:
-	
+	popq %rax
 	addq $16, %rsp
 	addq $32, %rsp
 	addq $16, %rsp
