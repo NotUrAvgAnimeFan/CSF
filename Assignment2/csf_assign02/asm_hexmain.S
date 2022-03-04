@@ -350,7 +350,7 @@ main:
 	popq %rbp
 	popq %rsp
 	popq %rbx	
-
+	movq $0, %rax
 	ret
 	
 	

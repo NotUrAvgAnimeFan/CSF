@@ -67,7 +67,7 @@ void hex_format_byte_as_hex(unsigned char byteval, char sbuf[]) {
 
 char hex_to_printable(unsigned char byteval) {
   //'.' for non-printable characters
-  if (byteval < 32 || byteval > 127) {
+  if (byteval < 32 || byteval > 126) {
     return 46;
   }
 
@@ -93,7 +93,7 @@ void full_hex_representation_printed(int complete_counter, int chars_in_data_buf
     single_conversion[2] = ' ';
 
     for (int j = 0; j < 3; j++) {
-      complete_hex_output[complete_counter + j] = single_conversion[j];
+      complete_hex_output[complete_counter + j] = single_conversion[j]; // can be written as complete_counter++
     }
     complete_counter +=3;
   }

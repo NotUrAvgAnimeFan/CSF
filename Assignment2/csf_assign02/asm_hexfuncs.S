@@ -124,46 +124,6 @@
 		addb $97, %r11b
 		movb %r11b, (%rsi, %rax, 1)
 		jmp .Offsetout
-
-
-	
-	/*
-	format_as_hex_variable_string_size:	
-		popq %rdi
-		popq %rbx
-
-		movl %rdi, %eax
-		decq %eax
-		
-		jmp .LcheckCond
-	
-	.Ltop:
-		movl %rbx, %rsi
-		sarl $4, %rbx
-		shll $4, %rbx
-		movl %rsi, %esi
-		subl %rbx, %esi
-		
-		cmp $10, %esi
-		jge .LelsePart
-		
-		jmp .Lout	
-	.LelsePart:
-	
-	.Lout:
-		sarl $4, %rbx
-		decq %eax
-		
-	
-		
-	.LcheckCond:
-		cmpl $0, %eax
-		jge .Ltop
-		
-		ret
-		
-	
-	*/
 	
 	hex_format_byte_as_hex:
 		// sets backwards counter for inserting chars in buf[]
@@ -217,7 +177,7 @@
 	// variables for comparison are set up
 		subq $8, %rsp
 		movq $32, %r10
-		movq $127, %r11
+		movq $126, %r11
 
 	// jumps to first condition
 		jmp .PrintablefirstCond
