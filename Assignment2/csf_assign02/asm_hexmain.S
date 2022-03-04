@@ -136,7 +136,7 @@ main:
 	
 	.printing:
 	cmpl $0, %ebx // compare chars_in_data_buf & 0
-	jle .checkingBiggestLoop //if chars_in_data_buf <= 0 then jump
+	jle .LReturn //if chars_in_data_buf <= 0 then jump
 	movq %r8, %rdi // offset counter now in %rdi
 	movq %r12, %rsi // offset_buf now in %rsi
 
