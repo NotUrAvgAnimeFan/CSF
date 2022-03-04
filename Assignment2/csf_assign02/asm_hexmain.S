@@ -6,25 +6,7 @@
 	.globl main
 main:
 	/* TODO: add your code here */
-	/*
-	start_function:
-	pushq %rbp
-	subq $16, %rsp
-	movq %rsp, %rbp // string_read_from_input
-
-	movq %rbp, %rdi
-	call hex_read
-	movq %rbp, %rdi
-	addq $1, %rax
-	movb $0, (%rbp, %rax, 1)
-	call hex_write_string
-	addq $16, %rsp
-	popq %rbp
-	ret
-	*/
-	// above this line is example code
-	
-	
+	//pushing for when we need original values at return
 	pushq %rbx
 	pushq %rsp
 	pushq %rbp
@@ -59,7 +41,6 @@ main:
 	//put queued chars into data_buf
 	.LqueuedCharsLoop:
 
-	//movb (%r10, %rbx, 1), (%r11, %rbx, 1)
 	movb (%r10, %rbx, 1), %r13b
 	movb %r13b, (%r11, %rbx, 1)
 	
@@ -103,13 +84,10 @@ main:
 	addq %rcx, %rdx // add z to chars_in_data_buf and store in %rdx
 	cmpq $16, %rdx // chars_in_data_buf + z < 16
 	jge .After // if chars_in_data_buf + z greater than or equal to 16 jump
-	//movb (%r9, %ecx, 1), (%r11, %edx, 1)
-
+	
 	movb (%r9, %rcx, 1), %r13b //hex_read_buf[z] now in %r13b
 	movb %r13b, (%r11, %rdx, 1)  // hex_read_buf[z] now in data_buf[chars_in_data_buf + z]
 
-	//pushq (%r9, %rcx, 1)
-	//popq (%r11, %rdx, 1)
 	incl %ecx // increase z counter
 	jmp .LmoveToDataBuf
 
