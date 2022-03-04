@@ -17,7 +17,8 @@ unsigned hex_read(char data_buf[]) {
 
 void hex_write_string(const char s[]) {
   
-  write(1, s, string_size(s));
+ int value = write(1, s, string_size(s));
+ (void)value;
 }
 
 int string_size(const char s[]) {
