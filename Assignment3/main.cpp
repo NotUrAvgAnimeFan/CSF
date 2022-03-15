@@ -9,10 +9,12 @@ using namespace std;
 
 
 struct Slot {
+  //tag = left overs/where it came from
+  //index = which set
   unsigned tag;
-  unsigned index;
-  unsigned offset;
   bool valid;
+  //load_ts for FIFO
+  //access_ts for LRU
   unsigned load_ts, access_ts;
   bool dirty;
 };
@@ -25,7 +27,7 @@ struct Cache {
   vector<Set> sets;
   
   unsigned num_sets;
-  unsigned block_size;
+  unsigned num_blocks_per_set;
   unsigned container_size;
   
   unsigned total_loads;
@@ -106,13 +108,17 @@ int main(int argc, char* argv[]) {
 
   Cache mainCache;
   mainCache.num_sets = num_sets;
-  mainCache.block_size = block_size;
+  mainCache.num_blocks_per_set = block_size;
   mainCache.container_size = num_block_bytes;
 
   for (int i = 0; i < mainCache.num_sets; i++) {
     Set simple_set;
-    for (int j = 0; j < mainCache.block_size; j++) {
+    for (int j = 0; j < mainCache.num_blocks_per_set; j++) {
       Slot simple_slot;
+      simple_slot.tag = 0;
+      simple_slot.valid = false;
+      simple_slot.load_ts = 0;
+      simple_slot.access_ts = 0;
       simple_set.push_back(simple_slot);
     }
     mainCache.sets.push_back(simiple_set);
@@ -120,8 +126,9 @@ int main(int argc, char* argv[]) {
   }
 
   unsigned time = 0;
-  if (mainCache.block_size == 1) {
-    unsigned indexes_used = 0;
+  
+  // direct mapping
+  if (mainCache.num_blocks_per_set == 1) {
     while (getline(cin,line)) {
       //store each memory access field
       stringstream ss;
@@ -136,15 +143,16 @@ int main(int argc, char* argv[]) {
 	// slots = 2^num_of_index_bits
 	// block size = 2^offset bits
 	// capacity = slots * block size
-	int num_index_bits = (log(mainCache.num_sets) / log(2)) / 4;
-	int num_tag_bits = (32 - num_index_bits) / 4;
-	string tag_str = address.substr(0, num_tag_bits);
-	string index_str = address.substr(num_tag_bits, num_index_bits);
-	int tag_size = tag_str.size();
-	int index_size = index_str.size();
-
-	usigned tag;
-	unsigned index;
+	int total_cache_capacity = ((mainCache.num_sets * mainCache.container_size * 8) / 4);
+	int num_offset_digits = ((mainCache.container_size * 8) / 4);
+	int num_index_digits = total_cache_capacity - num_offset_digits;
+	int num_tag_digits = 8 - num_offset_digits - num_index_digits;
+	string tag_str = address.substr(2, num_tag_digits);
+	string index_str = address.substr(num_tag_digits + 2, num_index_digits);
+	string offset_str = address.substr(num_tag_digits + num_index_digits + 2, num_offset_digits);
+	
+	usigned tag = 0;
+	unsigned index = 0;
 	
 	for (int i = 0; i < tag_size; i++) {
 	  if (tag_str[i] >= 'a') {
@@ -164,10 +172,20 @@ int main(int argc, char* argv[]) {
 	  index = index << 4;
 	}
 
-	for (int i = 0; i <indexes_used; i++) {
+	if (mainCache.sets[index].slots[0].valid == false || mainCache.sets[index].slots[0].tag != tag) {
+	  mainCache.misses++;
+	  mainCache.load_misses++;
+	  mainCache.total_cycles += 1 + (100 * (mainCache.container_size / 4));
+	  mainCache.sets[index].slots[0].tag = tag;
 	  
+	} else {
+	  mainCache.hits++;
+	  mainCache.load_hits++;
+	  mainCache.total_cycles++;
+    
 	}
-	
+	mainCache.total_loads++;
+	mainCache.sets[index].slots[0].access_ts = time;
       }
       else {
 	
