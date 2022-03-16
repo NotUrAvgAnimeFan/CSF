@@ -161,33 +161,32 @@ int main(int argc, char* argv[]) {
     cerr << "error: neither fifo nor lru specified" << endl;
     return 1;
   }
-  
-  //reading traces
-  char load_store;
-  string address;
-  string third_var;
-  string line;
 
+  //set up the cache
   Cache mainCache;
   mainCache.num_sets = num_sets;
   mainCache.num_blocks_per_set = block_size;
   mainCache.container_size = num_block_bytes;
-
-  for (int i = 0; i < mainCache.num_sets; i++) {
+  
+  for (int i = 0; i < (int)mainCache.num_sets; i++) {
     Set simple_set;
-    for (int j = 0; j < mainCache.num_blocks_per_set; j++) {
+    for (int j = 0; j < (int)mainCache.num_blocks_per_set; j++) {
       Slot simple_slot;
       simple_slot.tag = 0;
       simple_slot.valid = false;
       simple_slot.load_ts = 0;
       simple_slot.access_ts = 0;
-      simple_set.push_back(simple_slot);
+      simple_set.slots.push_back(simple_slot);
     }
-    mainCache.sets.push_back(simiple_set);
+    mainCache.sets.push_back(simple_set);
     
   }
 
   unsigned time = 0;
+  char load_store;
+  string address;
+  string third_var;
+  string line;
   
   // direct mapping
   if (mainCache.num_blocks_per_set == 1) {
@@ -201,9 +200,11 @@ int main(int argc, char* argv[]) {
       // miss when data not found in cache
       // both for loading
       // when miss reques from main memory, send data to cache, store in cache, send to CPU
+
+      //loading
       if (load_store == 'l') {
 	
-	string binaryForm = hexToBinary(address.substr(2, 8));
+	string binary_form = hexToBinary(address.substr(2, 8));
 	
 	// slots = 2^num_of_index_bits
 	// block size = 2^offset bits
@@ -212,36 +213,21 @@ int main(int argc, char* argv[]) {
 	int num_offset_digits = log2(mainCache.container_size);
 	int num_index_digits = total_cache_capacity - num_offset_digits;
 	int num_tag_digits = 32 - num_offset_digits - num_index_digits;
-	string tag_str = binaryForm.substr(0, num_tag_digits);
-	string index_str = address.substr(num_tag_digits, num_index_digits);
-	
-	usigned tag = 0;
-	unsigned index = 0;
-	
-	for (int i = 0; i < tag_size; i++) {
-	  if (tag_str[i] >= 'a') {
-	    tag += tag_str[i] - 'a' + 10;
-	  } else {
-	    tag += tag_str[i] - '0';
-	  }
-	  tag = tag << 4;
-	}
-	
-	for (int i = 0; i < index_size; i++) {
-	  if (index_str[i] >= 'a') {
-	    index += index_str[i] - 'a' + 10;
-	  } else {
-	    index += index_str[i] - '0';
-	  }
-	  index = index << 4;
-	}
+	string tag_str = binary_form.substr(0, num_tag_digits);
+	string index_str = binary_form.substr(num_tag_digits, num_index_digits);
 
+	//convert binary tag and index to decimal
+	unsigned tag = stoi(tag_str, 0, 2);
+	unsigned index = stoi(index_str, 0, 2);
+	
+	//a miss if data not found in the cache
 	if (mainCache.sets[index].slots[0].valid == false || mainCache.sets[index].slots[0].tag != tag) {
 	  mainCache.misses++;
 	  mainCache.load_misses++;
 	  mainCache.total_cycles += 1 + (100 * (mainCache.container_size / 4));
 	  mainCache.sets[index].slots[0].tag = tag;
-	  
+
+	//a hit if data found in the cache
 	} else {
 	  mainCache.hits++;
 	  mainCache.load_hits++;
@@ -251,7 +237,22 @@ int main(int argc, char* argv[]) {
 	mainCache.total_loads++;
 	mainCache.sets[index].slots[0].access_ts = time;
       }
+
+      //storing
       else {
+	//a hit if data found in the cache
+	if (mainCache.sets[index].slots[0].valid == true && mainCache.sets[index].slots[0].tag == tag) {
+	  //write-through
+
+	  //write-back
+	
+	//a miss if data not found in the cache
+	} else {
+	  //write-allocate
+
+	  //no-write-allocate
+
+	}
 	
       }
       
