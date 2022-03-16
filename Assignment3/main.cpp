@@ -37,6 +37,68 @@ struct Cache {
   unsigned hits;
   unsigned misses;
   unsigned total_cycles;
+};
+
+
+string hexToBinary(string hexadecimal) {
+  string binary;
+
+  int i = 0;
+  while (hexadecimal[i]) {
+    switch(hexadecimal[i]) {
+    case '0':
+      binary.append("0000");
+      break;
+    case '1':
+      binary.append("0001");
+      break;
+    case '2':
+      binary.append("0010");
+      break;
+    case '3':
+      binary.append("0011");
+      break;
+    case '4':
+      binary.append("0100");
+      break;
+    case '5':
+      binary.append("0101");
+      break;
+    case '6':
+      binary.append("0110");
+      break;
+    case '7':
+      binary.append("0111");
+      break;
+    case '8':
+      binary.append("1000");
+      break;
+    case '9':
+      binary.append("1001");
+      break;
+    case 'a':
+      binary.append("1010");
+      break;
+    case 'b':
+      binary.append("1011");
+      break;
+    case 'c':
+      binary.append("1100");
+      break;
+    case 'd':
+      binary.append("1101");
+      break;
+    case 'e':
+      binary.append("1110");
+      break;
+    case 'f':
+      binary.append("1111");
+      break;
+    }
+    i++;
+  }
+
+  return binary;
 }
 
 
@@ -140,16 +202,18 @@ int main(int argc, char* argv[]) {
       // both for loading
       // when miss reques from main memory, send data to cache, store in cache, send to CPU
       if (load_store == 'l') {
+	
+	string binaryForm = hexToBinary(address.substr(2, 8));
+	
 	// slots = 2^num_of_index_bits
 	// block size = 2^offset bits
 	// capacity = slots * block size
-	int total_cache_capacity = ((mainCache.num_sets * mainCache.container_size * 8) / 4);
-	int num_offset_digits = ((mainCache.container_size * 8) / 4);
+	int total_cache_capacity = log2(mainCache.num_sets * mainCache.container_size);
+	int num_offset_digits = log2(mainCache.container_size);
 	int num_index_digits = total_cache_capacity - num_offset_digits;
-	int num_tag_digits = 8 - num_offset_digits - num_index_digits;
-	string tag_str = address.substr(2, num_tag_digits);
-	string index_str = address.substr(num_tag_digits + 2, num_index_digits);
-	string offset_str = address.substr(num_tag_digits + num_index_digits + 2, num_offset_digits);
+	int num_tag_digits = 32 - num_offset_digits - num_index_digits;
+	string tag_str = binaryForm.substr(0, num_tag_digits);
+	string index_str = address.substr(num_tag_digits, num_index_digits);
 	
 	usigned tag = 0;
 	unsigned index = 0;
