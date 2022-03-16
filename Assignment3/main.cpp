@@ -21,6 +21,7 @@ struct Slot {
 
 struct Set {
   vector<Slot> slots;
+  map<unsigned, Slot*> index;
 };
 
 struct Cache {
