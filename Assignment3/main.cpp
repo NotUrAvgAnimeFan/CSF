@@ -190,67 +190,7 @@ int main(int argc, char* argv[]) {
 
   invalids(set, block, block_bytes);
   cache_setup(num_sets, block_size, num_block_bytes);
-  /*
-  if (set.find_first_not_of("0123456789") != string::npos || block.find_first_not_of("0123456789") != string::npos || block_bytes.find_first_not_of("0123456789") != string::npos) {
-    cerr << "error: invalid integer" << endl;
-    return 1;
-  }
   
-  if ((num_sets & (num_sets - 1)) != 0 || num_sets == 0) {
-    cerr << "error: number of sets isn't a power of 2" << endl;
-    return 1;
-  }
-  if (block_size == 0 || (block_size & (block_size - 1)) != 0) {
-    cerr << "error: block size isn't a power of 2" << endl;
-    return 1;
-  }
-  if (num_block_bytes == 0 || (num_block_bytes & (num_block_bytes - 1)) != 0) {
-    cerr << "error: number of bytes in each block isn't a power of 2" << endl;
-    return 1;
-  }
-  if (num_block_bytes < 4) {
-    cerr << "error: block size is less than 4" <<endl;
-    return 1;
-  }
-  if (write_hit.compare("write-back") == 0 && write_miss.compare("no-write-allocate") == 0) {
-    cerr << "error: write-back and no-write-allocate both specified" << endl;
-    return 1;
-  }
-
-  if (write_hit.compare("write-back") != 0 && write_hit.compare("write-through") != 0) {
-    cerr << "error: neither write-back nor write-through specified" << endl;
-    return 1;
-  }
-  if (write_miss.compare("write-allocate") != 0 && write_miss.compare("no-write-allocate") != 0) {
-    cerr << "error: neither write-allocate nor no-write-alllocate specified" << endl;
-    return 1;
-  }
-  if (eviction_type.compare("fifo") != 0 && eviction_type.compare("lru") != 0) {
-    cerr << "error: neither fifo nor lru specified" << endl;
-    return 1;
-  }
-  
-  
-  //set up the cache
-  Cache mainCache;
-  mainCache.num_sets = num_sets;
-  mainCache.num_blocks_per_set = block_size;
-  mainCache.container_size = num_block_bytes;
-  
-  for (int i = 0; i < (int)mainCache.num_sets; i++) {
-    Set simple_set;
-    for (int j = 0; j < (int)mainCache.num_blocks_per_set; j++) {
-      Slot simple_slot;
-      simple_slot.tag = 0;
-      simple_slot.valid = false;
-      simple_slot.load_ts = 0;
-      simple_slot.access_ts = 0;
-      simple_set.slots.push_back(simple_slot);
-    }
-    mainCache.sets.push_back(simple_set);
-    
-  }
-  */
   unsigned time = 0;
   char load_store;
   string address;
@@ -287,7 +227,17 @@ int main(int argc, char* argv[]) {
     //loading
     if (load_store == 'l') {
 
-      mainCache.sets[index].indexes
+      Slot *slot_index = mainCache.sets[index].directory[tag];
+
+      if (*slot_index.valid == false || *slot_index.tag != tag) {
+	mainCache.misses++;
+	maincache.load_misses++;
+	mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
+	*slot_index.valid == true;
+	*slot_index.tag = tag;
+	mainCache.sets[index].directory.erase(tag);
+	mainCahce.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index);
+      }
 
       
       bool hit = false;
