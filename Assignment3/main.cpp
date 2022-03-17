@@ -4,6 +4,7 @@
 #include <string>
 #include <sstream>
 #include <bits/stdc++.h>
+#include <map>
 using namespace std;
 
 
@@ -21,6 +22,7 @@ struct Slot {
 
 struct Set {
   vector<Slot> slots;
+  unsigned filled_slots;
   // unsigned is tag, and points to whatever slot
   map<unsigned, Slot*> directory;
 };
@@ -36,8 +38,8 @@ struct Cache {
   unsigned total_stores;
   unsigned load_hits;
   unsigned load_misses;
-  unsigned hits;
-  unsigned misses;
+  unsigned store_hits;
+  unsigned store_misses;
   unsigned total_cycles;
 };
 
@@ -223,23 +225,89 @@ int main(int argc, char* argv[]) {
     //convert binary tag and index to decimal
     unsigned tag = stoi(tag_str, 0, 2);
     unsigned index = stoi(index_str, 0, 2);
+
+    Slot *slot_index = mainCache.sets[index].directory[tag];
     
     //loading
     if (load_store == 'l') {
 
-      Slot *slot_index = mainCache.sets[index].directory[tag];
-
-      if (*slot_index.valid == false || *slot_index.tag != tag) {
-	mainCache.misses++;
+      //load miss
+      if (slot_index == 0) {
 	maincache.load_misses++;
 	mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
-	*slot_index.valid == true;
-	*slot_index.tag = tag;
-	mainCache.sets[index].directory.erase(tag);
-	mainCahce.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index);
+
+	int highest_access_ts = -1;
+	int index_with_highest = -1;
+	
+	if (mainCache.sets[index].filled_slots == mainCache.num_blocks_per_set) {
+	  for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	    if (mainCache.sets[index].slots[i].access_ts > highest_access_ts) {
+	      highest_access_ts = mainCache.sets[index].slots[i].access_ts;
+	      index_with_highest = i;
+	    }
+	  }
+	  slot_index = &mainCache.sets[index].slots[index_with_highest];
+	  mainCache.sets[index].directory.erase(*slot_index.tag);
+	  *slot_index.tag = tag;
+	  
+	  if (*slot_index.dirty == true) {
+	    mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
+	  }
+
+
+
+
+	  
+	} else {
+	  for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	    if (mainCache.sets[index].slots[i].valid == false) {
+	      slot_index = &(mainCache.sets[index].slots[i]);
+	      *slot_index.valid == true;
+	      *slot_index.tag = tag;
+	      break;
+	    }
+	  }
+	}
+	
+	mainCache.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index));
+
+	//load---- hit
+      } else {
+	mainCache.load_hits++;
+	mainCache.total_cycles++;
+      }
+      mainCache.total_loads++;
+
+      map<unsigned, Slot*>::iterator itr;
+      for (itr = mainCache.sets[index].directory.begin(); itr != mainCache.sets[index].directory.edn(); itr++) {
+	if (*itr->second.access_ts < *slot_index.access_ts) {
+	  *itr->second.access_ts++;
+	}
+	if (*itr->second.access_ts == *slot_index.access_ts) {
+	  break;
+	}
       }
 
       
+      *slot_index.access_ts = 0;
+      
+      //store
+    } else {
+      
+      //store miss
+      if (slot_index == 0) {
+	mainCache.store_misses++;
+	
+	
+	//store-hit
+      } else {
+	mainCache.store_hits++;
+      }
+      mainCache.total_stores++;
+      *slot_index.access_ts = 0;
+      
+    }
+    
       bool hit = false;
       bool all_used = true;
       int i;
