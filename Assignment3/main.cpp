@@ -43,6 +43,15 @@ struct Cache {
   unsigned total_cycles;
 };
 
+void final_print(Cache info) {
+  cout << "Total loads: " << info.total_loads << endl;
+  cout << "Total stores: " << info.total_stores << endl;
+  cout << "Load hits: " << info.load_hits << endl;
+  cout << "Load misse: " << info.load_misses << endl;
+  cout << "Store hits: " << info.store_hits << endl;
+  cout << "Store misses: " << info.store_misses << endl;
+  cout << "Total cycles: " << info.total_cycles << endl;
+}
 
 string hexToBinary(string hexadecimal) {
   string binary;
@@ -106,7 +115,7 @@ string hexToBinary(string hexadecimal) {
 }
 
 
-void invalids(string set, string block, string block_bytes) {
+int invalids(int num_sets, int block_size, int num_block_bytes, string write_hit, string write_miss, string eviction_type, string set, string block, string block_bytes) {
   if (set.find_first_not_of("0123456789") != string::npos || block.find_first_not_of("0123456789") != string::npos || block_bytes.find_first_not_of("0123456789") != string::npos) {
     cerr << "error: invalid integer" << endl;
     return 1;
@@ -145,9 +154,10 @@ void invalids(string set, string block, string block_bytes) {
     cerr << "error: neither fifo nor lru specified" << endl;
     return 1;
   }
+  return 0;
 }
 
-void cache_setup(int num_sets, int block_size, int num_block_bytes) {
+Cache cache_setup(int num_sets, int block_size, int num_block_bytes) {
   //set up the cache
   Cache mainCache;
   mainCache.num_sets = num_sets;
@@ -168,6 +178,7 @@ void cache_setup(int num_sets, int block_size, int num_block_bytes) {
     mainCache.sets.push_back(simple_set);
     
   }
+  return mainCache;
 }
 
 
@@ -191,10 +202,12 @@ int main(int argc, char* argv[]) {
   string block = argv[2];
   string block_bytes = argv[3];
 
-  invalids(set, block, block_bytes);
-  cache_setup(num_sets, block_size, num_block_bytes);
+  if (invalids(num_sets, block_size, num_block_bytes, write_hit, write_miss, eviction_type, set, block, block_bytes) == 1) {
+    return 1;
+  }
+  Cache mainCache = cache_setup(num_sets, block_size, num_block_bytes);
   
-  unsigned time = 0;
+  //unsigned time = 0;
   char load_store;
   string address;
   string third_var;
@@ -225,8 +238,11 @@ int main(int argc, char* argv[]) {
     
     //convert binary tag and index to decimal
     unsigned tag = stoi(tag_str, 0, 2);
-    unsigned index = stoi(index_str, 0, 2);
-
+    unsigned index = 0;
+    if (index_str.length() > 0) {
+      index = stoi(index_str, 0, 2);
+    }
+    
     Slot *slot_index = mainCache.sets[index].directory[tag];
     
     //loading
@@ -234,35 +250,35 @@ int main(int argc, char* argv[]) {
 
       //load miss
       if (slot_index == 0) {
-	maincache.load_misses++;
+	mainCache.load_misses++;
 	mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
 
-	int highest_access_ts = -1;
+	unsigned highest_access_ts = 0;
 	int index_with_highest = -1;
 	
 	if (mainCache.sets[index].filled_slots == mainCache.num_blocks_per_set) {
-	  for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	  for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
 	    if (mainCache.sets[index].slots[i].access_ts > highest_access_ts) {
 	      highest_access_ts = mainCache.sets[index].slots[i].access_ts;
 	      index_with_highest = i;
 	    }
 	  }
 	  slot_index = &mainCache.sets[index].slots[index_with_highest];
-	  mainCache.sets[index].directory.erase(*slot_index.tag);
-	  *slot_index.tag = tag;
+	  mainCache.sets[index].directory.erase(slot_index->tag);
+	  slot_index->tag = tag;
 	  
-	  if (*slot_index.dirty == true) {
+	  if (slot_index->dirty == true) {
 	    mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
-	    *slot_index.dirty = false;
+	    slot_index->dirty = false;
 	  }
 
 	} else {
-	  for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	  for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
 	    if (mainCache.sets[index].slots[i].valid == false) {
 	      slot_index = &(mainCache.sets[index].slots[i]);
-	      *slot_index.valid == true;
-	      *slot_index.tag = tag;
-	      mainCache.filled_slots++;
+	      slot_index->valid = true;
+	      slot_index->tag = tag;
+	      mainCache.sets[index].filled_slots++;
 	      break;
 	    }
 	  }
@@ -278,17 +294,17 @@ int main(int argc, char* argv[]) {
       mainCache.total_loads++;
       
       map<unsigned, Slot*>::iterator itr;
-      for (itr = mainCache.sets[index].directory.begin(); itr != mainCache.sets[index].directory.edn(); itr++) {
-	if (*itr->second.access_ts < *slot_index.access_ts) {
-	  *itr->second.access_ts++;
+      for (itr = mainCache.sets[index].directory.begin(); itr != mainCache.sets[index].directory.end(); itr++) {
+	if (itr->second->access_ts < slot_index->access_ts) {
+	  itr->second->access_ts++;
 	}
-	if (*itr->second.access_ts == *slot_index.access_ts) {
+	if (itr->second->access_ts == slot_index->access_ts) {
 	  break;
 	}
       }
       
       
-      *slot_index.access_ts = 0;
+      slot_index->access_ts = 0;
       
       //store
     } else {
@@ -299,32 +315,32 @@ int main(int argc, char* argv[]) {
 	
 	//write-allocate: load into cache, update line in cache
 	if (write_miss == "write-allocate") {
-	  int highest_access_ts = -1;
+	  unsigned highest_access_ts = 0;
 	  int index_with_highest = -1;
 	  
 	  if (mainCache.sets[index].filled_slots == mainCache.num_blocks_per_set) {
-	    for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	    for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
 	      if (mainCache.sets[index].slots[i].access_ts > highest_access_ts) {
 		highest_access_ts = mainCache.sets[index].slots[i].access_ts;
 		index_with_highest = i;
 	      }
 	    }
 	    slot_index = &mainCache.sets[index].slots[index_with_highest];
-	    mainCache.sets[index].directory.erase(*slot_index.tag);
-	    *slot_index.tag = tag;
+	    mainCache.sets[index].directory.erase(slot_index->tag);
+	    slot_index->tag = tag;
 	    
-	    if (*slot_index.dirty == true) {
+	    if (slot_index->dirty == true) {
 	      mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
-	      *slot_index.dirty = false;
+	      slot_index->dirty = false;
 	    }
 	    
 	  } else {
-	    for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	    for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
 	      if (mainCache.sets[index].slots[i].valid == false) {
 		slot_index = &(mainCache.sets[index].slots[i]);
-		*slot_index.valid == true;
-		*slot_index.tag = tag;
-		mainCache.filled_slots++;
+		slot_index->valid = true;
+		slot_index->tag = tag;
+		mainCache.sets[index].filled_slots++;
 		break;
 	      }
 	    }
@@ -348,16 +364,15 @@ int main(int argc, char* argv[]) {
 	}
 	//write-back: defer to write to memory until replacement of line
 	if (write_hit == "write-back") {
-	  *mainCache.sets[index].directory[tag].dirty == true;
+	  mainCache.sets[index].directory[tag]->dirty = true;
 	}
 	
       }
       mainCache.total_stores++;
-      *slot_index.access_ts = 0;
       
     }
     
   }
-  
+  final_print(mainCache);
   return 0;
 }
