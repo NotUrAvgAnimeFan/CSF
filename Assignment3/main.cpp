@@ -191,10 +191,7 @@ Cache cache_setup(int num_sets, int block_size, int num_block_bytes) {
 }
 
 
-void lruMiss(Cache mainCache, unsigned index, unsigned tag, Slot* slot_index) {
-  mainCache.load_misses++;
-  mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
-  
+void lruLoadMiss(Cache mainCache, unsigned index, unsigned tag, Slot* slot_index) {
   unsigned highest_access_ts = 0;
   int index_with_highest = -1;
   
@@ -213,9 +210,103 @@ void lruMiss(Cache mainCache, unsigned index, unsigned tag, Slot* slot_index) {
       mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
       slot_index->dirty = false;
     }
+    
+  } else {
+    
+    for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
+      if (mainCache.sets[index].slots[i].valid == false) {
+	slot_index = &(mainCache.sets[index].slots[i]);
+	slot_index->valid = true;
+	slot_index->tag = tag;
+	mainCache.sets[index].filled_slots++;
+	break;
+      }
+    }
+  }
+	
+  mainCache.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index));
+}
+
+void lruLoadHit(Cache mainCache) {
+  
+  mainCache.load_hits++;
+  mainCache.total_cycles++;
+}
+
+void lruFinish(Cache mainCache, unsigned index, Slot* slot_index){
+  
+  map<unsigned, Slot*>::iterator itr;
+  for (auto itr = mainCache.sets[index].directory.begin(); itr != mainCache.sets[index].directory.end(); ++itr) {
+    if (itr->second->access_ts < slot_index->access_ts) {
+      itr->second->access_ts++;
+    }
+    if (itr->second->access_ts == slot_index->access_ts) {
+      break;
+    }
+  }
+  slot_index->access_ts = 0;
+}
+
+void storeMiss(Cache mainCache, unsigned index, unsigned tag, Slot* slot_index, string write_miss) {
+  mainCache.store_misses++;
+	
+  //write-allocate: load into cache, update line in cache
+  if (write_miss == "write-allocate") {
+    unsigned highest_access_ts = 0;
+    int index_with_highest = -1;
+    
+    if (mainCache.sets[index].filled_slots == mainCache.num_blocks_per_set) {
+      for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
+	if (mainCache.sets[index].slots[i].access_ts > highest_access_ts) {
+	  highest_access_ts = mainCache.sets[index].slots[i].access_ts;
+	  index_with_highest = i;
+	}
+      }
+      slot_index = &mainCache.sets[index].slots[index_with_highest];
+      mainCache.sets[index].directory.erase(slot_index->tag);
+      slot_index->tag = tag;
+      
+      if (slot_index->dirty == true) {
+	mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
+	slot_index->dirty = false;
+      }
+      
+    } else {
+      for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
+	if (mainCache.sets[index].slots[i].valid == false) {
+	  slot_index = &(mainCache.sets[index].slots[i]);
+	  slot_index->valid = true;
+	  slot_index->tag = tag;
+	  mainCache.sets[index].filled_slots++;
+	  break;
+	}
+      }
+    }
+    
+    mainCache.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index));
+    mainCache.total_cycles++;
+  }
+  
+  //no-write-allocate: writes straight to memory, does not load into cache
+  if (write_miss == "no-write-allocate") {
+    mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
+  }
 }
 
 
+void lruStoreHIt(Cache mainCache, unsigned index, unsigned tag, string write_hit) {
+	  
+  mainCache.store_hits++;
+  
+  //write-through: write immediately to memory
+  if (write_hit == "write-through") {
+    mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
+  }
+  //write-back: defer to write to memory until replacement of line
+  if (write_hit == "write-back") {
+    mainCache.sets[index].directory[tag]->dirty = true;
+  }
+}
 
 int main(int argc, char* argv[]) {
   
@@ -287,8 +378,8 @@ int main(int argc, char* argv[]) {
       if (slot_index == 0) {
 	mainCache.load_misses++;
 	mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
-
-	lruMiss()
+	
+	lruLoadMiss(mainCache, index, tag, slot_index);
 	
 	/*
 	unsigned highest_access_ts = 0;
@@ -309,8 +400,9 @@ int main(int argc, char* argv[]) {
 	    mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
 	    slot_index->dirty = false;
 	  }
-	*/
+	  
 	} else {
+	
 	  for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
 	    if (mainCache.sets[index].slots[i].valid == false) {
 	      slot_index = &(mainCache.sets[index].slots[i]);
@@ -323,17 +415,20 @@ int main(int argc, char* argv[]) {
 	}
 	
 	mainCache.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index));
-	
+	*/
 	//load---- hit
       } else {
+	lruLoadHit(mainCache);
+	/*
 	mainCache.load_hits++;
 	mainCache.total_cycles++;
+	*/
       }
+
       mainCache.total_loads++;
-
-
-      
-      
+      lruFinish(mainCache, index, slot_index);
+      /*
+      mainCache.total_loads++;
       map<unsigned, Slot*>::iterator itr;
       for (auto itr = mainCache.sets[index].directory.begin(); itr != mainCache.sets[index].directory.end(); ++itr) {
 	if (itr->second->access_ts < slot_index->access_ts) {
@@ -346,12 +441,17 @@ int main(int argc, char* argv[]) {
       
       
       slot_index->access_ts = 0;
+      */
       
       //store
     } else {
       
       //store miss
       if (slot_index == 0) {
+
+	storeMiss(mainCache, index, tag, slot_index, write_miss);
+
+	/*
 	mainCache.store_misses++;
 	
 	//write-allocate: load into cache, update line in cache
@@ -395,8 +495,15 @@ int main(int argc, char* argv[]) {
 	if (write_miss == "no-write-allocate") {
 	  mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
 	}
+	*/
+	
 	//store-hit
       } else {
+
+	
+	lruStoreHIt(mainCache, index, tag, write_hit);
+	
+	/*
 	mainCache.store_hits++;
 	
 	//write-through: write immediately to memory
@@ -408,8 +515,10 @@ int main(int argc, char* argv[]) {
 	  mainCache.sets[index].directory[tag]->dirty = true;
 	}
 	
+	*/
       }
       mainCache.total_stores++;
+      lruFinish(mainCache, index, load_index);
       
     }
     
