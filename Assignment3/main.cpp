@@ -156,6 +156,7 @@ void cache_setup(int num_sets, int block_size, int num_block_bytes) {
   
   for (int i = 0; i < (int)mainCache.num_sets; i++) {
     Set simple_set;
+    simple_set.filled_slots = 0;
     for (int j = 0; j < (int)mainCache.num_blocks_per_set; j++) {
       Slot simple_slot;
       simple_slot.tag = 0;
@@ -252,32 +253,30 @@ int main(int argc, char* argv[]) {
 	  
 	  if (*slot_index.dirty == true) {
 	    mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
+	    *slot_index.dirty = false;
 	  }
 
-
-
-
-	  
 	} else {
 	  for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
 	    if (mainCache.sets[index].slots[i].valid == false) {
 	      slot_index = &(mainCache.sets[index].slots[i]);
 	      *slot_index.valid == true;
 	      *slot_index.tag = tag;
+	      mainCache.filled_slots++;
 	      break;
 	    }
 	  }
 	}
 	
 	mainCache.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index));
-
+	
 	//load---- hit
       } else {
 	mainCache.load_hits++;
 	mainCache.total_cycles++;
       }
       mainCache.total_loads++;
-
+      
       map<unsigned, Slot*>::iterator itr;
       for (itr = mainCache.sets[index].directory.begin(); itr != mainCache.sets[index].directory.edn(); itr++) {
 	if (*itr->second.access_ts < *slot_index.access_ts) {
@@ -287,7 +286,7 @@ int main(int argc, char* argv[]) {
 	  break;
 	}
       }
-
+      
       
       *slot_index.access_ts = 0;
       
@@ -298,180 +297,67 @@ int main(int argc, char* argv[]) {
       if (slot_index == 0) {
 	mainCache.store_misses++;
 	
+	//write-allocate: load into cache, update line in cache
+	if (write_miss == "write-allocate") {
+	  int highest_access_ts = -1;
+	  int index_with_highest = -1;
+	  
+	  if (mainCache.sets[index].filled_slots == mainCache.num_blocks_per_set) {
+	    for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	      if (mainCache.sets[index].slots[i].access_ts > highest_access_ts) {
+		highest_access_ts = mainCache.sets[index].slots[i].access_ts;
+		index_with_highest = i;
+	      }
+	    }
+	    slot_index = &mainCache.sets[index].slots[index_with_highest];
+	    mainCache.sets[index].directory.erase(*slot_index.tag);
+	    *slot_index.tag = tag;
+	    
+	    if (*slot_index.dirty == true) {
+	      mainCache.total_cycles += (100 * (mainCache.container_size) / 4);
+	      *slot_index.dirty = false;
+	    }
+	    
+	  } else {
+	    for (int i = 0; i < mainCache.num_blocks_per_set; i++) {
+	      if (mainCache.sets[index].slots[i].valid == false) {
+		slot_index = &(mainCache.sets[index].slots[i]);
+		*slot_index.valid == true;
+		*slot_index.tag = tag;
+		mainCache.filled_slots++;
+		break;
+	      }
+	    }
+	  }
+	  
+	  mainCache.sets[index].directory.insert(pair<unsigned, Slot*>(tag, slot_index));
+	  mainCache.total_cycles++;
+	}
 	
+	//no-write-allocate: writes straight to memory, does not load into cache
+	if (write_miss == "no-write-allocate") {
+	  mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
+	}
 	//store-hit
       } else {
 	mainCache.store_hits++;
+	
+	//write-through: write immediately to memory
+	if (write_hit == "write-through") {
+	  mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
+	}
+	//write-back: defer to write to memory until replacement of line
+	if (write_hit == "write-back") {
+	  *mainCache.sets[index].directory[tag].dirty == true;
+	}
+	
       }
       mainCache.total_stores++;
       *slot_index.access_ts = 0;
       
     }
     
-      bool hit = false;
-      bool all_used = true;
-      int i;
-      for (i = 0; i < mainCache.num_blocks_per_set; i++) {
-	if (mainCache.sets[index].slots[i].valid == true) {
-	  if (mainCache.sets[index].slots[i].tag == tag) {
-	    hit = true;
-	  }
-	} else {
-	  all_used = false;
-	}
-      }
-
-      // a miss if data not found in the cache
-      if (hit == false) {
-	mainCache.misses++;
-	maincache.load_misses++;
-	mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
-
-	if (all_used == true && eviction_type = "LRU") {
-	  int index_last_used = 0;
-	  int highest_num = mainCache.sets[index].slots[0].access_ts;
-	  
-	  for (i = 1; i < mainCache.num_blocks_per_set; i++) {
-	    if (mainCache.sets[index].slots[i].access_ts > highest_num) {
-	      index_last_used = i;
-	      highest_num = mainCache.sets[index].slots[i].access_ts;
-	    }
-	  }
-	  mainCache.sets[index].slots[index_last_used].tag = tag;
-	  mainCache.sets[index].slots[index_last_used].access_ts = 0;
-
-	  for (i = 0; i < mainCache.num_blocks_per_set; i++) {
-	    if (i != index_last_used) {
-	      mainCache.sets[index].slots[index_last_used].access_ts++;
-	    }
-	  }
-	  
-	  
-	}
-	mainCache.sets[index].slots[i].tag == tag;
-      } else {
-	
-      }
-      
-      
-      //a miss if data not found in the cache
-      if (mainCache.sets[index].slots[0].valid == false || mainCache.sets[index].slots[0].tag != tag) {
-	mainCache.misses++;
-	mainCache.load_misses++;
-	mainCache.total_cycles += 1 + (100 * (mainCache.container_size / 4));
-	mainCache.sets[index].slots[0].tag = tag;
-	
-	//a hit if data found in the cache
-      } else {
-	mainCache.hits++;
-	mainCache.load_hits++;
-	mainCache.total_cycles++;
-	
-      }
-      mainCache.total_loads++;
-      mainCache.sets[index].slots[0].access_ts = time;
-    }
-    
-    //storing
-    else {
-      //a hit if data found in the cache
-      if (mainCache.sets[index].slots[0].valid == true && mainCache.sets[index].slots[0].tag == tag) {
-	//write-through
-	
-	//write-back
-	
-	//a miss if data not found in the cache
-      } else {
-	//write-allocate
-	
-	//no-write-allocate
-	
-      }
-      
-    }
-    
   }
-  
-  
-  
-  /*
-  // direct mapping
-  if (mainCache.num_blocks_per_set == 1) {
-    while (getline(cin,line)) {
-      //store each memory access field
-      stringstream ss;
-      ss << line;
-      ss >> load_store >> address >> third_var;
-      
-      // hits happen when found data in cache
-      // miss when data not found in cache
-      // both for loading
-      // when miss reques from main memory, send data to cache, store in cache, send to CPU
-
-      //loading
-      if (load_store == 'l') {
-	
-	string binary_form = hexToBinary(address.substr(2, 8));
-	
-	// slots = 2^num_of_index_bits
-	// block size = 2^offset bits
-	// capacity = slots * block size
-	int total_cache_capacity = log2(mainCache.num_sets * mainCache.container_size);
-	int num_offset_digits = log2(mainCache.container_size);
-	int num_index_digits = total_cache_capacity - num_offset_digits;
-	int num_tag_digits = 32 - num_offset_digits - num_index_digits;
-	string tag_str = binary_form.substr(0, num_tag_digits);
-	string index_str = binary_form.substr(num_tag_digits, num_index_digits);
-
-	//convert binary tag and index to decimal
-	unsigned tag = stoi(tag_str, 0, 2);
-	unsigned index = stoi(index_str, 0, 2);
-	
-	//a miss if data not found in the cache
-	if (mainCache.sets[index].slots[0].valid == false || mainCache.sets[index].slots[0].tag != tag) {
-	  mainCache.misses++;
-	  mainCache.load_misses++;
-	  mainCache.total_cycles += 1 + (100 * (mainCache.container_size / 4));
-	  mainCache.sets[index].slots[0].tag = tag;
-
-	//a hit if data found in the cache
-	} else {
-	  mainCache.hits++;
-	  mainCache.load_hits++;
-	  mainCache.total_cycles++;
-    
-	}
-	mainCache.total_loads++;
-	mainCache.sets[index].slots[0].access_ts = time;
-      }
-
-      //storing
-      else {
-	//a hit if data found in the cache
-	if (mainCache.sets[index].slots[0].valid == true && mainCache.sets[index].slots[0].tag == tag) {
-	  //write-through
-
-	  //write-back
-	
-	//a miss if data not found in the cache
-	} else {
-	  //write-allocate
-
-	  //no-write-allocate
-
-	}
-	
-      }
-      
-    }
-    
-  } else if (mainCache.num_sets == 1) {
-
-  } else {
-
-  }  
-
-  */
   
   return 0;
 }
