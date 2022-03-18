@@ -12,5 +12,9 @@ csim : main.o
 main.o : main.cpp
 	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
 
+assign3.zip :
+	rm -f assign3.zip
+	zip -9r $@  Makefile README.txt main.cpp
+
 clean :
 	rm -f main *.o csim
