@@ -1,4 +1,9 @@
-// Ricardo Morales Gonzalez rmorale5  Ana Kuri akuri1
+/*
+ * Cache Simulation Program
+ * CSF Assignment 3 Milestone 2
+ * Ricardo Morales Gonzalez  rmorale5@jhu.edu
+ * Ana Kuri  akuri1@jhu.edu
+ */
 #include <iostream>
 #include <stdlib.h>
 #include <string>
@@ -41,6 +46,16 @@ struct Cache {
   unsigned total_cycles;
 };
 
+
+/*
+ * Prints all necessary information in the correct format
+ * 
+ * Parameters:
+ *   info - a pointer to a Cache object containing all info about cache
+ *
+ * Returns:
+ *   nothing
+ */
 void final_print(Cache* info) {
   cout << "Total loads: " << info->total_loads << endl;
   cout << "Total stores: " << info->total_stores << endl;
@@ -51,6 +66,16 @@ void final_print(Cache* info) {
   cout << "Total cycles: " << info->total_cycles << endl;
 }
 
+/*
+ * Converts a given string of hexadecimals into an equivalent string
+ * in binary
+ * 
+ * Parameters:
+ *   hexadecimal - the hexadecimal string to convert
+ *
+ * Returns:
+ *   a string with a binary representation of the given hexadecimal
+ */
 string hexToBinary(string hexadecimal) {
   string binary;
 
@@ -113,6 +138,25 @@ string hexToBinary(string hexadecimal) {
 }
 
 
+
+/*
+ * Outputs an error if certain invalid characteristics are met
+ * 
+ * Parameters:
+ *   num_sets - the number of sets in the current cache
+ *   block_size - the amount of blocks in all sets in the current cache
+ *   num_block_bites - the size of an individual block in cache
+ *   write_hit - string containing write-hit behavior defined by user
+ *   write_miss - string containing write-miss behavior defined by user
+ *   eviction_type - string containing eviction_type specified by user
+ *   set - string representation of number of sets in cache
+ *   block - string representation of number of blocks per set in cache
+ *   block_bytes - string representation of number of bytes per block in cache
+ *
+ * Returns:
+ *   a 1 to indicate main to return 1 in case an invalid combination of
+ *    parameters is triggered 
+ */
 int invalids(int num_sets, int block_size, int num_block_bytes, string write_hit, string write_miss, string eviction_type, string set, string block, string block_bytes) {
   if (set.find_first_not_of("0123456789") != string::npos || block.find_first_not_of("0123456789") != string::npos || block_bytes.find_first_not_of("0123456789") != string::npos) {
     cerr << "error: invalid integer" << endl;
@@ -155,6 +199,42 @@ int invalids(int num_sets, int block_size, int num_block_bytes, string write_hit
   return 0;
 }
 
+
+/*
+ * Fills a particular set with the desired number of blocks
+ * 
+ * Parameters:
+ *   simple_set - a pointer to the set in which all slots will be placed
+ *   block_size - an int indicating how many slots to put in the set
+ *   order - the access_ts order that will be given to each block
+ *
+ * Returns:
+ *   nothing
+ */
+void setup_slots(Set* simple_set, int block_size, int order) {
+  for (int j = 0; j < block_size; j++) {
+      Slot simple_slot;
+      simple_slot.tag = 0;
+      simple_slot.valid = false;
+      simple_slot.load_ts = 0;
+      simple_slot.access_ts = order--;
+      simple_slot.dirty = false;
+      simple_set->slots.push_back(simple_slot);
+    }
+}
+
+/*
+ * Sets up a cache to a default state
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to setup
+ *   num_sets - an int indicating how many sets will be in the cache
+ *   block_size - an int indicating how many blocks there will be per set
+ *   num_block_bytes - an int indicating how many bytes there will be per block
+ *
+ * Returns:
+ *   nothing
+ */
 void cache_setup(Cache* mainCache, int num_sets, int block_size, int num_block_bytes) {
   //set up the cache
   mainCache->num_sets = num_sets;
@@ -174,84 +254,137 @@ void cache_setup(Cache* mainCache, int num_sets, int block_size, int num_block_b
     Set simple_set;
     simple_set.filled_slots = 0;
     int order = block_size - 1;
-    for (int j = 0; j < block_size; j++) {
-      Slot simple_slot;
-      simple_slot.tag = 0;
-      simple_slot.valid = false;
-      simple_slot.load_ts = 0;
-      simple_slot.access_ts = order--;
-      simple_slot.dirty = false;
-      simple_set.slots.push_back(simple_slot);
-    }
-    
+    setup_slots(&simple_set, block_size, order);
     mainCache->sets.push_back(simple_set);
     
   }
   
 }
 
+
+/*
+ * Increases the access times of all blocks and sets the desired block 
+ *  access time to 0
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache with all the info to be changed
+ *   index - an unsigned indicating the index of the slots to increase access_ts
+ *   slot_index - an int indicating the slot to be changed to 0
+ * 
+ * Returns:
+ *   nothing
+ */
 void lruFinish(Cache* mainCache, unsigned index, unsigned slot_index){
   //update access times
+  
   for (unsigned i = 0; i < mainCache->num_blocks_per_set; i++) {
-    if (mainCache->sets[index].slots[i].access_ts < mainCache->sets[index].slots[slot_index].access_ts) {
+    if (mainCache->sets[index].slots[i].tag != mainCache->sets[index].slots[slot_index].tag){
       mainCache->sets[index].slots[i].access_ts++;
     }
   }
+  
   mainCache->sets[index].slots[slot_index].access_ts = 0;
 }
 
 
+/*
+ * Performs operations that happen in a load hit
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   slot_index - an unsigned indicating the specific slot to affect
+ *
+ * Returns:
+ *   nothing
+ */
 void lruLoadHit(Cache* mainCache, unsigned index, unsigned slot_index) {
   mainCache->total_cycles++;
   lruFinish(mainCache, index, slot_index);
 }
 
-void lruLoadMiss(Cache* mainCache, unsigned index, unsigned tag) {
-  bool found_empty = false;
-  unsigned empty_index = 0;
-  unsigned lru_index = 0;
-  unsigned highest_ts = 0;
 
+/*
+ * Performs operations that happen in a load miss
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   found_empty - marks the default state of found_empty
+ *   slot_to_use - an unsigned indicating the specific slot to affect
+ *   highest_ts - an unsigned which will contain the highest last used ts
+ *
+ * Returns:
+ *   an unsigned indicating the slot that now contains the desired tag
+ */
+unsigned loadMissWork(Cache* mainCache, unsigned index, bool found_empty, unsigned slot_to_use, unsigned highest_ts) {  
+  
   //find an empty slot in the set
   for (unsigned i = 0; i < mainCache->num_blocks_per_set; i++) {
     if (mainCache->sets[index].slots[i].valid == false) {
-      empty_index = i;
+      slot_to_use = i;
       found_empty = true;
-      break;
     }
     //if the timestamp is bigger, then it's the least recently used index
-    if (mainCache->sets[index].slots[i].access_ts > highest_ts) {
+    if (found_empty == false && mainCache->sets[index].slots[i].access_ts > highest_ts) {
       highest_ts = mainCache->sets[index].slots[i].access_ts;
-      lru_index = i;
+      slot_to_use = i;
     }
+    mainCache->sets[index].slots[i].access_ts++;
   }
-
+  
   //if all slots filled, evict the least recently used and put the new tag
   if (found_empty == false) {
-
+    
     //if block being evicted is dirty, write back to memory
-    if (mainCache->sets[index].slots[lru_index].dirty == true) {
+    if (mainCache->sets[index].slots[slot_to_use].dirty == true) {
       mainCache->total_cycles += 100 * (mainCache->container_size / 4);
     }
     
-    mainCache->sets[index].directory.erase(mainCache->sets[index].slots[lru_index].tag);
-    mainCache->sets[index].directory.insert({tag, lru_index});
-    mainCache->sets[index].slots[lru_index].tag = tag;
-    mainCache->sets[index].slots[lru_index].dirty = true;
-    lruFinish(mainCache,index, lru_index);
+    mainCache->sets[index].directory.erase(mainCache->sets[index].slots[slot_to_use].tag);
+    mainCache->sets[index].slots[slot_to_use].dirty = false;
     
-    return;
   }
-  
-  //there is an empty slot
-  mainCache->sets[index].directory.insert({tag, empty_index});
-  mainCache->sets[index].slots[empty_index].tag = tag;
-  mainCache->sets[index].slots[empty_index].valid = true;
-  lruFinish(mainCache,index, empty_index);
+  return slot_to_use;
 }
 
 
+/*
+ * Performs operations that happen in a load miss
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned indicating the tag that is to be added to the cache
+ *
+ * Returns:
+ *   nothing
+ */
+void lruLoadMiss(Cache* mainCache, unsigned index, unsigned tag) {
+  mainCache->total_cycles += 1 + (100 * (mainCache->container_size / 4));
+  unsigned slot_to_use = loadMissWork(mainCache, index, false, 0, 0);
 
+  //there is an empty slot
+  mainCache->sets[index].directory.insert({tag, slot_to_use});
+  mainCache->sets[index].slots[slot_to_use].tag = tag;
+  mainCache->sets[index].slots[slot_to_use].valid = true;
+  mainCache->sets[index].slots[slot_to_use].access_ts = 0;
+}
+
+
+/*
+ * Performs operations that happen in a store miss depending on parameters
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned that was not found in cache
+ *   write_miss - a string containing the behavior to perform when a
+ *    store miss happens
+ *
+ * Returns:
+ *   nothing
+ */
 void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_miss) {
   
 	
@@ -270,13 +403,27 @@ void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_mis
 }
 
 
+/*
+ * Performs operations that happen in a store hit
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned tag indicating the tag that was found in cache
+ *   write_hit - a string indicaitng what behavior to perform when a 
+ *    write_hit occurs
+ *   slot_index - an unsigned indicating the specific slot to affect
+ *
+ * Returns:
+ *   nothing
+ */
 void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hit, unsigned slot_index) {
 	  
   //write-through: write immediately to memory
   if (write_hit == "write-through") {
     
     mainCache->sets[index].slots[slot_index].tag = tag;
-    mainCache->total_cycles += 100;
+    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
   }
   //write-back: defer to write to memory until replacement of line
   if (write_hit == "write-back") {
@@ -288,6 +435,112 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
   
 }
 
+
+/*
+ * Decides if there is a hit or a miss for load based on parameters
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   key_count - an int indicating if tag was found in cache
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned indicating the tag that was looked in the cache
+ *
+ * Returns:
+ *   nothing
+ */
+void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag) {
+  unsigned slot_index;
+  //load miss
+  if (key_count <= 0) {
+    mainCache->load_misses++;
+    lruLoadMiss(mainCache, index, tag);
+    
+    //load---- hit
+  } else {
+    mainCache->load_hits++;
+    slot_index = mainCache->sets[index].directory[tag];
+    lruLoadHit(mainCache, index, slot_index);
+    
+  }
+  
+  mainCache->total_loads++;
+}
+
+
+/*
+ * Decides between hit or miss for store and directs to proper functions
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   key_count - an int indicating if tag was found in cache
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned indicating the tag that was looked in the cache
+ *   write_miss - a string indicating what behavior to perform during a
+ *    write_miss
+ *   write_hit - a string indicating what to do in case of a write_hit
+ *
+ *
+ * Returns:
+ *   nothing
+ */
+void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag, string write_miss, string write_hit) {
+  unsigned slot_index;
+  //store miss
+  if (key_count <= 0) {
+    mainCache->store_misses++;
+    storeMiss(mainCache, index, tag, write_miss);
+    //store-hit
+  } else {
+    mainCache->store_hits++;
+    slot_index = mainCache->sets[index].directory[tag];
+    lruStoreHit(mainCache, index, tag, write_hit, slot_index);
+    
+  }
+  mainCache->total_stores++;
+}
+
+
+/*
+ * Checks for either load or store and directs to appropriate functions
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned indicating the tag that was looked in the cache
+ *   load_store - a char that indicates either a load or a store to the cache
+ *   write_miss - a string indicating what behavior to perform during a
+ *    write_miss
+ *   write_hit - a string indicating what to do in case of a write_hit
+ *
+ *
+ * Returns:
+ *   nothing
+ */
+void loadStoreWork(Cache* mainCache, unsigned index, unsigned tag, char load_store, string write_miss, string write_hit) {
+  //search the set to find the index of the slot that has the tag
+  int key_count = mainCache->sets[index].directory.count(tag);
+  
+  //loading
+  if (load_store == 'l') {
+    loadDecisions(mainCache, key_count, index, tag);
+    //store
+  } else {
+
+    storeDecisions(mainCache, key_count, index, tag, write_miss, write_hit);
+  }
+}
+
+
+/*
+ * Decides between hit or miss for store and directs to proper functions
+ * 
+ * Parameters:
+ *  argc - an int indicating the number of paramenters given at command line
+ *  argv - an array of characters that contains all info given at command line
+ *
+ * Returns:
+ *   1 if error happens 0 if everything finishes as normal
+ */
 int main(int argc, char* argv[]) {
   
   //print an error if invalid number of parameters
@@ -339,60 +592,18 @@ int main(int argc, char* argv[]) {
     string index_str = binary_form.substr(num_tag_digits, num_index_digits);
     
     //convert binary tag and index to decimal value
-    unsigned tag = stoi(tag_str, 0, 2);
+    unsigned tag = 0;
+    if (tag_str.length() > 0) {
+      tag = stoi(tag_str, 0, 2);
+    }
     unsigned index = 0;
     if (index_str.length() > 0) {
       index = stoi(index_str, 0, 2);
     }
 
-    //search the set to find the index of the slot that has the tag
-    unsigned slot_index;
-    int key_count = -1;
-    for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
-      if (mainCache.sets[index].slots[i].tag == tag) {
-	slot_index = i;
-	key_count = 1;
-	break;
-      }
-    }
 
-    //loading
-    if (load_store == 'l') {
+    loadStoreWork(&mainCache, index, tag, load_store, write_miss, write_hit);
 
-      //load miss
-      if (key_count <= 0) {
-	mainCache.load_misses++;
-	mainCache.total_cycles += 1 + (100 * (mainCache.container_size / 4));
-	lruLoadMiss(&mainCache, index, tag);
-	
-	//load---- hit
-      } else {
-	mainCache.load_hits++;
-	slot_index = mainCache.sets[index].directory[tag];
-	lruLoadHit(&mainCache, index, slot_index);
-	
-      }
-
-      mainCache.total_loads++;
-      
-      //store
-    } else {
-      
-      //store miss
-      if (key_count <= 0) {
-	mainCache.store_misses++;
-        storeMiss(&mainCache, index, tag, write_miss);
-	//store-hit
-      } else {
-	mainCache.store_hits++;
-	slot_index = mainCache.sets[index].directory[tag];
-	lruStoreHit(&mainCache, index, tag, write_hit, slot_index);
-	
-      }
-      mainCache.total_stores++;
-      
-    }
-    
   }
   final_print(&mainCache);
   return 0;
