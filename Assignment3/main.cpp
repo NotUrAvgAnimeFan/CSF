@@ -1,4 +1,4 @@
-// Ricardo Morales Gonzalez rmorale5  Ana Kuri
+// Ricardo Morales Gonzalez rmorale5  Ana Kuri akuri1
 #include <iostream>
 #include <stdlib.h>
 #include <string>
@@ -6,8 +6,6 @@
 #include <bits/stdc++.h>
 #include <map>
 using namespace std;
-
-
 
 struct Slot {
   //tag = left overs/thing to check
@@ -175,12 +173,13 @@ void cache_setup(Cache* mainCache, int num_sets, int block_size, int num_block_b
   for (int i = 0; i < num_sets; i++) {
     Set simple_set;
     simple_set.filled_slots = 0;
+    int order = block_size - 1;
     for (int j = 0; j < block_size; j++) {
       Slot simple_slot;
       simple_slot.tag = 0;
       simple_slot.valid = false;
       simple_slot.load_ts = 0;
-      simple_slot.access_ts = 0;
+      simple_slot.access_ts = order--;
       simple_slot.dirty = false;
       simple_set.slots.push_back(simple_slot);
     }
@@ -192,21 +191,12 @@ void cache_setup(Cache* mainCache, int num_sets, int block_size, int num_block_b
 }
 
 void lruFinish(Cache* mainCache, unsigned index, unsigned slot_index){
-
+  //update access times
   for (unsigned i = 0; i < mainCache->num_blocks_per_set; i++) {
-    if (mainCache->sets[index].slots[i].valid == true && mainCache->sets[index].slots[i].access_ts != mainCache->sets[index].slots[slot_index].access_ts) {
+    if (mainCache->sets[index].slots[i].access_ts < mainCache->sets[index].slots[slot_index].access_ts) {
       mainCache->sets[index].slots[i].access_ts++;
     }
   }
-
-  /*
-  map<unsigned, unsigned>::iterator itr;
-  for (auto itr = mainCache->sets[index].directory.begin(); itr != mainCache->sets[index].directory.end(); itr++) {
-    if (mainCache->sets[index].slots[itr->second].access_ts < mainCache->sets[index].slots[slot_index].access_ts) {
-      mainCache->sets[index].slots[itr->second].access_ts++;
-    }
-  }
-  */
   mainCache->sets[index].slots[slot_index].access_ts = 0;
 }
 
@@ -216,55 +206,65 @@ void lruLoadHit(Cache* mainCache, unsigned index, unsigned slot_index) {
   lruFinish(mainCache, index, slot_index);
 }
 
-void lruLoadMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned slot_index) {
-  unsigned highest_access_ts = 0;
-  unsigned index_with_highest = 0;
+void lruLoadMiss(Cache* mainCache, unsigned index, unsigned tag) {
   bool found_empty = false;
-  
+  unsigned empty_index = 0;
+  unsigned lru_index = 0;
+  unsigned highest_ts = 0;
+
+  //find an empty slot in the set
   for (unsigned i = 0; i < mainCache->num_blocks_per_set; i++) {
-    if (mainCache->sets[index].slots[i].valid == true) {
-      if (mainCache->sets[index].slots[i].access_ts > highest_access_ts) {
-	highest_access_ts = mainCache->sets[index].slots[i].access_ts;
-	index_with_highest = i;
-      }
-    } else {
+    if (mainCache->sets[index].slots[i].valid == false) {
+      empty_index = i;
       found_empty = true;
-      index_with_highest = i;
       break;
+    }
+    //if the timestamp is bigger, then it's the least recently used index
+    if (mainCache->sets[index].slots[i].access_ts > highest_ts) {
+      highest_ts = mainCache->sets[index].slots[i].access_ts;
+      lru_index = i;
     }
   }
 
-  slot_index = index_with_highest;
+  //if all slots filled, evict the least recently used and put the new tag
   if (found_empty == false) {
-    mainCache->sets[index].directory.erase(mainCache->sets[index].slots[slot_index].tag);
-  }
-  if (mainCache->sets[index].slots[slot_index].dirty == true) {
-    mainCache->total_cycles += (100 * ((mainCache->container_size) / 4));
-    mainCache->sets[index].slots[slot_index].dirty = false;
+
+    //if block being evicted is dirty, write back to memory
+    if (mainCache->sets[index].slots[lru_index].dirty == true) {
+      mainCache->total_cycles += 100 * (mainCache->container_size / 4);
+    }
+    
+    mainCache->sets[index].directory.erase(mainCache->sets[index].slots[lru_index].tag);
+    mainCache->sets[index].directory.insert({tag, lru_index});
+    mainCache->sets[index].slots[lru_index].tag = tag;
+    mainCache->sets[index].slots[lru_index].dirty = true;
+    lruFinish(mainCache,index, lru_index);
+    
+    return;
   }
   
-  mainCache->sets[index].slots[slot_index].valid = true;
-  mainCache->sets[index].slots[slot_index].tag = tag;
-  
-  mainCache->sets[index].directory.insert({tag, slot_index});
-  lruFinish(mainCache, index, slot_index);
+  //there is an empty slot
+  mainCache->sets[index].directory.insert({tag, empty_index});
+  mainCache->sets[index].slots[empty_index].tag = tag;
+  mainCache->sets[index].slots[empty_index].valid = true;
+  lruFinish(mainCache,index, empty_index);
 }
 
 
 
-void storeMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned slot_index, string write_miss) {
+void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_miss) {
   
 	
   //write-allocate: load into cache, update line in cache
   if (write_miss == "write-allocate") {
     mainCache->total_cycles++;
-    lruLoadMiss(mainCache, index, tag, slot_index);
+    lruLoadMiss(mainCache, index, tag);
     
   }
   
   //no-write-allocate: writes straight to memory, does not load into cache
   if (write_miss == "no-write-allocate") {
-    mainCache->total_cycles += 1 + (100 * ((mainCache->container_size) / 4));
+    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
   }
   
 }
@@ -276,11 +276,12 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
   if (write_hit == "write-through") {
     
     mainCache->sets[index].slots[slot_index].tag = tag;
-    mainCache->total_cycles += 1 + (100 * ((mainCache->container_size) / 4));
+    mainCache->total_cycles += 100;
   }
   //write-back: defer to write to memory until replacement of line
   if (write_hit == "write-back") {
     mainCache->sets[index].slots[slot_index].dirty = true;
+    mainCache->total_cycles++;
   }
   
   lruFinish(mainCache, index, slot_index);
@@ -310,10 +311,11 @@ int main(int argc, char* argv[]) {
   if (invalids(num_sets, block_size, num_block_bytes, write_hit, write_miss, eviction_type, set, block, block_bytes) == 1) {
     return 1;
   }
+
+  //set up the cache
   Cache mainCache;
   cache_setup(&mainCache, num_sets, block_size, num_block_bytes);
   
-  //unsigned time = 0;
   char load_store;
   string address;
   string third_var;
@@ -325,16 +327,10 @@ int main(int argc, char* argv[]) {
     ss << line;
     ss >> load_store >> address >> third_var;
     
-    // hits happen when found data in cache
-    // miss when data not found in cache
-    // both for loading
-    // when miss reques from main memory, send data to cache, store in cache, send to CPU
-
+    //convert the address to binary
     string binary_form = hexToBinary(address.substr(2, 8));
     
-    // slots = 2^num_of_index_bits
-    // block size = 2^offset bits
-    // capacity = slots * block size
+    //get the binary form of the tag and index from the address
     int total_cache_capacity = log2(mainCache.num_sets * mainCache.container_size);
     int num_offset_digits = log2(mainCache.container_size);
     int num_index_digits = total_cache_capacity - num_offset_digits;
@@ -342,35 +338,32 @@ int main(int argc, char* argv[]) {
     string tag_str = binary_form.substr(0, num_tag_digits);
     string index_str = binary_form.substr(num_tag_digits, num_index_digits);
     
-    //convert binary tag and index to decima
+    //convert binary tag and index to decimal value
     unsigned tag = stoi(tag_str, 0, 2);
     unsigned index = 0;
     if (index_str.length() > 0) {
       index = stoi(index_str, 0, 2);
     }
 
+    //search the set to find the index of the slot that has the tag
     unsigned slot_index;
     int key_count = -1;
     for (unsigned i = 0; i < mainCache.num_blocks_per_set; i++) {
       if (mainCache.sets[index].slots[i].tag == tag) {
 	slot_index = i;
 	key_count = 1;
+	break;
       }
     }
 
-    
-    //int key_count = mainCache.sets[index].directory.count(tag);
-    //unsigned slot_index;
-    
     //loading
     if (load_store == 'l') {
 
       //load miss
       if (key_count <= 0) {
 	mainCache.load_misses++;
-	mainCache.total_cycles += 1 + (100 * (mainCache.container_size) / 4);
-	
-	lruLoadMiss(&mainCache, index, tag, slot_index);
+	mainCache.total_cycles += 1 + (100 * (mainCache.container_size / 4));
+	lruLoadMiss(&mainCache, index, tag);
 	
 	//load---- hit
       } else {
@@ -388,7 +381,7 @@ int main(int argc, char* argv[]) {
       //store miss
       if (key_count <= 0) {
 	mainCache.store_misses++;
-        storeMiss(&mainCache, index, tag, slot_index, write_miss);
+        storeMiss(&mainCache, index, tag, write_miss);
 	//store-hit
       } else {
 	mainCache.store_hits++;
