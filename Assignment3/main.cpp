@@ -303,6 +303,9 @@ void lruLoadHit(Cache* mainCache, unsigned index, unsigned slot_index) {
   lruFinish(mainCache, index, slot_index);
 }
 
+void fifoLoadHit(Cache* mainCache) {
+  mainCache->total_cycles++;
+}
 
 /*
  * Performs operations that happen in a load miss
@@ -371,6 +374,56 @@ void lruLoadMiss(Cache* mainCache, unsigned index, unsigned tag) {
   mainCache->sets[index].slots[slot_to_use].access_ts = 0;
 }
 
+
+unsigned loadMissFifoWork(Cache* mainCache, unsigned index, bool found_empty, unsigned slot_to_use, unsigned lowest_creation_time) {
+  
+  if (mainCache->sets[index].slots[0].valid == false) {
+    slot_to_use = 0;
+  } else  {
+    lowest_creation_time = mainCache->sets[index].slots[0].load_ts;
+    slot_to_use = 0;
+    
+    
+    //find an empty slot in the set
+    for (unsigned i = 1; i < mainCache->num_blocks_per_set; i++) {
+      if (mainCache->sets[index].slots[i].valid == false) {
+	slot_to_use = i;
+	found_empty = true;
+      }
+      //if the timestamp is bigger, then it's the least recently used index
+      if (found_empty == false && mainCache->sets[index].slots[i].access_ts < lowest_creation_time) {
+	lowest_creation_time = mainCache->sets[index].slots[i].access_ts;
+	slot_to_use = i;
+      }
+    }
+    
+    //if all slots filled, evict the least recently used and put the new tag
+    if (found_empty == false) {
+      
+      //if block being evicted is dirty, write back to memory
+      if (mainCache->sets[index].slots[slot_to_use].dirty == true) {
+	mainCache->total_cycles += 100 * (mainCache->container_size / 4);
+      }
+      
+      mainCache->sets[index].directory.erase(mainCache->sets[index].slots[slot_to_use].tag);
+      mainCache->sets[index].slots[slot_to_use].dirty = false;
+      
+    }
+  }
+  
+  
+  return slot_to_use;
+}
+
+void fifoLoadMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned creation_time) {
+  mainCache->total_cycles += 1 + (100 * (mainCache->container_size / 4));
+  unsigned slot_to_use = loadMissFifoWork(mainCache, index, false, 0, 0);
+
+  mainCache->sets[index].directory.insert({tag, slot_to_use});
+  mainCache->sets[index].slots[slot_to_use].tag = tag;
+  mainCache->sets[index].slots[slot_to_use].valid = true;
+  mainCache->sets[index].slots[slot_to_use].load_ts = creation_time;
+}
 
 /*
  * Performs operations that happen in a store miss depending on parameters
@@ -448,18 +501,25 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
  * Returns:
  *   nothing
  */
-void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag) {
+void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag, string eviction_type, unsigned creation_time) {
   unsigned slot_index;
   //load miss
   if (key_count <= 0) {
     mainCache->load_misses++;
-    lruLoadMiss(mainCache, index, tag);
-    
+    if (eviction_type == "lru") {
+      lruLoadMiss(mainCache, index, tag);
+    } else  {
+
+    }
     //load---- hit
   } else {
     mainCache->load_hits++;
     slot_index = mainCache->sets[index].directory[tag];
-    lruLoadHit(mainCache, index, slot_index);
+    if (eviction_type == "lru") {
+      lruLoadHit(mainCache, index, slot_index);
+    } else {
+      
+    }
     
   }
   
@@ -483,18 +543,25 @@ void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag
  * Returns:
  *   nothing
  */
-void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag, string write_miss, string write_hit) {
+void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag, string write_miss, string write_hit, string eviction_type, unsigned creation_time) {
   unsigned slot_index;
   //store miss
   if (key_count <= 0) {
     mainCache->store_misses++;
-    storeMiss(mainCache, index, tag, write_miss);
+    if (eviction_type == "lru") {
+      storeMiss(mainCache, index, tag, write_miss);
+    } else  {
+      
+    }
     //store-hit
   } else {
     mainCache->store_hits++;
     slot_index = mainCache->sets[index].directory[tag];
-    lruStoreHit(mainCache, index, tag, write_hit, slot_index);
-    
+    if (eviction_type == "lru") {
+      lruStoreHit(mainCache, index, tag, write_hit, slot_index);
+    } else {
+
+    }
   }
   mainCache->total_stores++;
 }
@@ -516,18 +583,19 @@ void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned ta
  * Returns:
  *   nothing
  */
-void loadStoreWork(Cache* mainCache, unsigned index, unsigned tag, char load_store, string write_miss, string write_hit) {
+void loadStoreWork(Cache* mainCache, unsigned index, unsigned tag, char load_store, string write_miss, string write_hit, string eviction_type, unsigned creation_time) {
   //search the set to find the index of the slot that has the tag
   int key_count = mainCache->sets[index].directory.count(tag);
   
   //loading
   if (load_store == 'l') {
-    loadDecisions(mainCache, key_count, index, tag);
+    loadDecisions(mainCache, key_count, index, tag, eviction_type, creation_time);
     //store
   } else {
-
-    storeDecisions(mainCache, key_count, index, tag, write_miss, write_hit);
+    
+    storeDecisions(mainCache, key_count, index, tag, write_miss, write_hit, eviction_type, creation_time);
   }
+  
 }
 
 
@@ -574,6 +642,8 @@ int main(int argc, char* argv[]) {
   string third_var;
   string line;
 
+  unsigned creation_time = 1;
+  
   while (getline(cin,line)) {
     //store each memory access field
     stringstream ss;
@@ -601,9 +671,11 @@ int main(int argc, char* argv[]) {
       index = stoi(index_str, 0, 2);
     }
 
-
-    loadStoreWork(&mainCache, index, tag, load_store, write_miss, write_hit);
-
+    
+    loadStoreWork(&mainCache, index, tag, load_store, write_miss, write_hit, eviction_type, creation_time);
+    
+    creation_time++;
+    
   }
   final_print(&mainCache);
   return 0;
