@@ -379,6 +379,7 @@ unsigned loadMissFifoWork(Cache* mainCache, unsigned index, bool found_empty, un
   
   if (mainCache->sets[index].slots[0].valid == false) {
     slot_to_use = 0;
+    found_empty = true;
   } else  {
     lowest_creation_time = mainCache->sets[index].slots[0].load_ts;
     slot_to_use = 0;
@@ -389,28 +390,27 @@ unsigned loadMissFifoWork(Cache* mainCache, unsigned index, bool found_empty, un
       if (mainCache->sets[index].slots[i].valid == false) {
 	slot_to_use = i;
 	found_empty = true;
-      }
-      //if the timestamp is bigger, then it's the least recently used index
-      if (found_empty == false && mainCache->sets[index].slots[i].access_ts < lowest_creation_time) {
-	lowest_creation_time = mainCache->sets[index].slots[i].access_ts;
+	break;
+      } else if (found_empty == false && mainCache->sets[index].slots[i].load_ts < lowest_creation_time) {
+	//if the timestamp is bigger, then it's the least recently used index
+	lowest_creation_time = mainCache->sets[index].slots[i].load_ts;
 	slot_to_use = i;
       }
     }
-    
-    //if all slots filled, evict the least recently used and put the new tag
-    if (found_empty == false) {
-      
-      //if block being evicted is dirty, write back to memory
-      if (mainCache->sets[index].slots[slot_to_use].dirty == true) {
-	mainCache->total_cycles += 100 * (mainCache->container_size / 4);
-      }
-      
-      mainCache->sets[index].directory.erase(mainCache->sets[index].slots[slot_to_use].tag);
-      mainCache->sets[index].slots[slot_to_use].dirty = false;
-      
-    }
   }
   
+  //if all slots filled, evict the least recently used and put the new tag
+  if (found_empty == false) {
+    
+    //if block being evicted is dirty, write back to memory
+    if (mainCache->sets[index].slots[slot_to_use].dirty == true) {
+      mainCache->total_cycles += 100 * (mainCache->container_size / 4);
+    }
+    
+    mainCache->sets[index].directory.erase(mainCache->sets[index].slots[slot_to_use].tag);
+    mainCache->sets[index].slots[slot_to_use].dirty = false;
+    
+  }
   
   return slot_to_use;
 }
@@ -455,6 +455,20 @@ void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_mis
   
 }
 
+void fifoStoreMiss(Cache* mainCache, unsigned index, unsigned tag, string write_miss, unsigned creation_time) {
+  //write-allocate: load into cache, update line in cache
+  if (write_miss == "write-allocate") {
+    mainCache->total_cycles++;
+    fifoLoadMiss(mainCache, index, tag, creation_time);
+  }
+
+  //no-write-allocate: writes straight to memory, does not load into cache
+  if (write_miss == "no-write-allocate") {
+    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
+  }
+  
+}
+
 
 /*
  * Performs operations that happen in a store hit
@@ -489,6 +503,20 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
 }
 
 
+void fifoStoreHit(Cache* mainCache, unsigned index, unsigned slot_index, string write_hit) {
+  //write-through: write immediately to memory
+  if (write_hit == "write-through") {
+    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
+  }
+
+  //write-back: defer to write to memory until replacement of line
+  if (write_hit == "write-back") {
+    mainCache->sets[index].slots[slot_index].dirty = true;
+    mainCache->total_cycles++;
+  }
+  
+}
+
 /*
  * Decides if there is a hit or a miss for load based on parameters
  * 
@@ -509,7 +537,7 @@ void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag
     if (eviction_type == "lru") {
       lruLoadMiss(mainCache, index, tag);
     } else  {
-
+      fifoLoadMiss(mainCache, index, tag, creation_time);
     }
     //load---- hit
   } else {
@@ -518,7 +546,7 @@ void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag
     if (eviction_type == "lru") {
       lruLoadHit(mainCache, index, slot_index);
     } else {
-      
+      fifoLoadHit(mainCache);
     }
     
   }
@@ -551,7 +579,7 @@ void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned ta
     if (eviction_type == "lru") {
       storeMiss(mainCache, index, tag, write_miss);
     } else  {
-      
+      fifoStoreMiss(mainCache, index, tag, write_miss, creation_time);
     }
     //store-hit
   } else {
@@ -560,7 +588,7 @@ void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned ta
     if (eviction_type == "lru") {
       lruStoreHit(mainCache, index, tag, write_hit, slot_index);
     } else {
-
+      fifoStoreHit(mainCache, index, slot_index, write_hit);
     }
   }
   mainCache->total_stores++;
