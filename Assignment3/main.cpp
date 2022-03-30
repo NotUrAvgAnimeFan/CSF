@@ -341,7 +341,7 @@ unsigned loadMissWork(Cache* mainCache, unsigned index, bool found_empty, unsign
     
     //if block being evicted is dirty, write back to memory
     if (mainCache->sets[index].slots[slot_to_use].dirty == true) {
-      mainCache->total_cycles += 100 * (mainCache->container_size / 4);
+      mainCache->total_cycles += 1 + 100 * (mainCache->container_size / 4);
     }
     
     mainCache->sets[index].directory.erase(mainCache->sets[index].slots[slot_to_use].tag);
@@ -438,33 +438,43 @@ void fifoLoadMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned creat
  * Returns:
  *   nothing
  */
-void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_miss) {
+void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_miss, string write_hit) {
   
 	
   //write-allocate: load into cache, update line in cache
   if (write_miss == "write-allocate") {
-    mainCache->total_cycles++;
+
     lruLoadMiss(mainCache, index, tag);
+
+    if (write_hit == "write-through") {
+      mainCache->total_cycles += 100;
+    } else {
+      mainCache->total_cycles += (mainCache->container_size/4) * 100;
+    }
     
   }
   
   //no-write-allocate: writes straight to memory, does not load into cache
   if (write_miss == "no-write-allocate") {
-    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
+    mainCache->total_cycles += 100;
   }
   
 }
 
-void fifoStoreMiss(Cache* mainCache, unsigned index, unsigned tag, string write_miss, unsigned creation_time) {
+void fifoStoreMiss(Cache* mainCache, unsigned index, unsigned tag, string write_miss, string write_hit, unsigned creation_time) {
   //write-allocate: load into cache, update line in cache
   if (write_miss == "write-allocate") {
-    mainCache->total_cycles++;
     fifoLoadMiss(mainCache, index, tag, creation_time);
+    if (write_hit == "write-through") {
+      mainCache->total_cycles += 100;
+    } else {
+      mainCache->total_cycles += (mainCache->container_size/4) * 100;
+    }
   }
 
   //no-write-allocate: writes straight to memory, does not load into cache
   if (write_miss == "no-write-allocate") {
-    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
+    mainCache->total_cycles += 100;
   }
   
 }
@@ -490,7 +500,7 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
   if (write_hit == "write-through") {
     
     mainCache->sets[index].slots[slot_index].tag = tag;
-    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
+    mainCache->total_cycles += 100;
   }
   //write-back: defer to write to memory until replacement of line
   if (write_hit == "write-back") {
@@ -506,7 +516,7 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
 void fifoStoreHit(Cache* mainCache, unsigned index, unsigned slot_index, string write_hit) {
   //write-through: write immediately to memory
   if (write_hit == "write-through") {
-    mainCache->total_cycles += 100 * ((mainCache->container_size) / 4);
+    mainCache->total_cycles += 100;
   }
 
   //write-back: defer to write to memory until replacement of line
@@ -687,8 +697,11 @@ int main(int argc, char* argv[]) {
     int num_index_digits = total_cache_capacity - num_offset_digits;
     int num_tag_digits = 32 - num_offset_digits - num_index_digits;
     string tag_str = binary_form.substr(0, num_tag_digits);
-    string index_str = binary_form.substr(num_tag_digits, num_index_digits);
-    
+    string index_str = "";
+    int string_size = binary_form.size();
+    if (num_tag_digits + num_index_digits <= string_size) {
+      index_str = binary_form.substr(num_tag_digits, num_index_digits);
+    }
     //convert binary tag and index to decimal value
     unsigned tag = 0;
     if (tag_str.length() > 0) {
