@@ -67,6 +67,77 @@ void final_print(Cache* info) {
 }
 
 /*
+ * Converts a char letter into its appropriate binary representation
+ * works for numbers 0-9
+ * 
+ * Parameters:
+ *   full_string - a string pointers where the appending of the string will be held
+ *   letter - the hexadecimal letter to convert
+ *
+ * Returns:
+ *   nothing
+ */
+void hexToBinaryNumbers(string* full_string, char letter) {
+  if (letter == '0') {
+    full_string->append("0000");
+  } else if (letter == '1') {
+    full_string->append("0001");
+  } else if (letter == '2') {
+    full_string->append("0010");
+  } else if (letter == '3') {
+    full_string->append("0011");
+  } else if (letter == '4') {
+    full_string->append("0100");
+  } else if (letter == '5') {
+    full_string->append("0101");
+  } else if (letter == '6') {
+    full_string->append("0110");
+  } else if (letter == '7') {
+    full_string->append("0111");
+  } else if (letter == '8') {
+    full_string->append("1000");
+  } else if (letter == '9') {
+    full_string->append("1001");
+  }
+}
+
+/*
+ * Converts a char letter into its appropriate binary representation
+ * works for letters a-f
+ * 
+ * Parameters:
+ *   full_string - a string pointer pointing to the string where the binary
+ *     representation will be appended
+ *   letter - the hexadecimal char to convert
+ *
+ * Returns:
+ *   nothing
+ */
+void hexToBinaryLetters(string* full_string, char letter) {
+  switch (letter) {
+  case 'a':
+    full_string->append("1010");
+    break;
+  case 'b':
+    full_string->append("1011");
+    break;
+  case 'c':
+    full_string->append("1100");
+    break;
+  case 'd':
+    full_string->append("1101");
+    break;
+  case 'e':
+    full_string->append("1110");
+    break;
+  case 'f':
+    full_string->append("1111");
+    break;
+  }
+  
+}
+
+/*
  * Converts a given string of hexadecimals into an equivalent string
  * in binary
  * 
@@ -81,63 +152,16 @@ string hexToBinary(string hexadecimal) {
 
   int i = 0;
   while (hexadecimal[i]) {
-    switch(hexadecimal[i]) {
-    case '0':
-      binary.append("0000");
-      break;
-    case '1':
-      binary.append("0001");
-      break;
-    case '2':
-      binary.append("0010");
-      break;
-    case '3':
-      binary.append("0011");
-      break;
-    case '4':
-      binary.append("0100");
-      break;
-    case '5':
-      binary.append("0101");
-      break;
-    case '6':
-      binary.append("0110");
-      break;
-    case '7':
-      binary.append("0111");
-      break;
-    case '8':
-      binary.append("1000");
-      break;
-    case '9':
-      binary.append("1001");
-      break;
-    case 'a':
-      binary.append("1010");
-      break;
-    case 'b':
-      binary.append("1011");
-      break;
-    case 'c':
-      binary.append("1100");
-      break;
-    case 'd':
-      binary.append("1101");
-      break;
-    case 'e':
-      binary.append("1110");
-      break;
-    case 'f':
-      binary.append("1111");
-      break;
+    if (hexadecimal[i] >= '0' && hexadecimal[i] <= '9') {
+      hexToBinaryNumbers(&binary, hexadecimal[i]);
+    } else if (hexadecimal[i] >= 'a' && hexadecimal[i] <= 'f') {
+      hexToBinaryLetters(&binary, hexadecimal[i]);
     }
     i++;
   }
 
   return binary;
 }
-
-
 
 /*
  * Outputs an error if certain invalid characteristics are met
