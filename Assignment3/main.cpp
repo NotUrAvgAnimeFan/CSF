@@ -447,9 +447,7 @@ void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_mis
     lruLoadMiss(mainCache, index, tag);
 
     if (write_hit == "write-through") {
-      mainCache->total_cycles += 100;
-    } else {
-      mainCache->total_cycles += (mainCache->container_size/4) * 100;
+      mainCache->total_cycles += 1 + 100;
     }
     
   }
@@ -464,12 +462,13 @@ void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_mis
 void fifoStoreMiss(Cache* mainCache, unsigned index, unsigned tag, string write_miss, string write_hit, unsigned creation_time) {
   //write-allocate: load into cache, update line in cache
   if (write_miss == "write-allocate") {
-    fifoLoadMiss(mainCache, index, tag, creation_time);
     if (write_hit == "write-through") {
-      mainCache->total_cycles += 100;
-    } else {
-      mainCache->total_cycles += (mainCache->container_size/4) * 100;
+      mainCache->total_cycles += 1 + 100;
     }
+    
+    fifoLoadMiss(mainCache, index, tag, creation_time);
+
+   
   }
 
   //no-write-allocate: writes straight to memory, does not load into cache
@@ -500,7 +499,7 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
   if (write_hit == "write-through") {
     
     mainCache->sets[index].slots[slot_index].tag = tag;
-    mainCache->total_cycles += 100;
+    mainCache->total_cycles += 1 + 100;
   }
   //write-back: defer to write to memory until replacement of line
   if (write_hit == "write-back") {
@@ -516,7 +515,7 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
 void fifoStoreHit(Cache* mainCache, unsigned index, unsigned slot_index, string write_hit) {
   //write-through: write immediately to memory
   if (write_hit == "write-through") {
-    mainCache->total_cycles += 100;
+    mainCache->total_cycles += 1 + 100;
   }
 
   //write-back: defer to write to memory until replacement of line
@@ -587,9 +586,9 @@ void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned ta
   if (key_count <= 0) {
     mainCache->store_misses++;
     if (eviction_type == "lru") {
-      storeMiss(mainCache, index, tag, write_miss);
+      storeMiss(mainCache, index, tag, write_miss, write_hit);
     } else  {
-      fifoStoreMiss(mainCache, index, tag, write_miss, creation_time);
+      fifoStoreMiss(mainCache, index, tag, write_miss, write_hit, creation_time);
     }
     //store-hit
   } else {
