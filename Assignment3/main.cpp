@@ -288,7 +288,7 @@ void lruFinish(Cache* mainCache, unsigned index, unsigned slot_index){
 
 
 /*
- * Performs operations that happen in a load hit
+ * Performs operations that happen in a load hit for LRU
  * 
  * Parameters:
  *   mainCache - a pointer to the cache to be affected
@@ -303,12 +303,21 @@ void lruLoadHit(Cache* mainCache, unsigned index, unsigned slot_index) {
   lruFinish(mainCache, index, slot_index);
 }
 
+/*
+ * Performs operations that happen in a load hit for FIFO
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *
+ * Returns:
+ *   nothing
+ */
 void fifoLoadHit(Cache* mainCache) {
   mainCache->total_cycles++;
 }
 
 /*
- * Performs operations that happen in a load miss
+ * Performs operations that happen in a load miss for LRU implementation
  * 
  * Parameters:
  *   mainCache - a pointer to the cache to be affected
@@ -353,7 +362,7 @@ unsigned loadMissWork(Cache* mainCache, unsigned index, bool found_empty, unsign
 
 
 /*
- * Performs operations that happen in a load miss
+ * Performs operations that happen in a load miss for LRU implementation
  * 
  * Parameters:
  *   mainCache - a pointer to the cache to be affected
@@ -375,6 +384,20 @@ void lruLoadMiss(Cache* mainCache, unsigned index, unsigned tag) {
 }
 
 
+
+/*
+ * Performs operations that happen in a load miss for FIFO implementation
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   found_empty - marks the default state of found_empty
+ *   slot_to_use - an unsigned indicating the specific slot to affect
+ *   lowest_creation_time - an unsigned which will contain the lowest load_ts time
+ *
+ * Returns:
+ *   an unsigned indicating the slot that now contains the desired tag
+ */
 unsigned loadMissFifoWork(Cache* mainCache, unsigned index, bool found_empty, unsigned slot_to_use, unsigned lowest_creation_time) {
   
   if (mainCache->sets[index].slots[0].valid == false) {
@@ -415,6 +438,20 @@ unsigned loadMissFifoWork(Cache* mainCache, unsigned index, bool found_empty, un
   return slot_to_use;
 }
 
+
+
+/*
+ * Performs operations that happen in a load miss for FIFO implementation
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned indicating the tag that is to be added to the cache
+ *   creation_time - an unsigned that indicates when the new item in cache was made
+ *
+ * Returns:
+ *   nothing
+ */
 void fifoLoadMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned creation_time) {
   mainCache->total_cycles += 1 + (100 * (mainCache->container_size / 4));
   unsigned slot_to_use = loadMissFifoWork(mainCache, index, false, 0, 0);
@@ -426,7 +463,7 @@ void fifoLoadMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned creat
 }
 
 /*
- * Performs operations that happen in a store miss depending on parameters
+ * Performs operations that happen in a store miss depending on parameters for LRU implementation
  * 
  * Parameters:
  *   mainCache - a pointer to the cache to be affected
@@ -434,6 +471,7 @@ void fifoLoadMiss(Cache* mainCache, unsigned index, unsigned tag, unsigned creat
  *   tag - an unsigned that was not found in cache
  *   write_miss - a string containing the behavior to perform when a
  *    store miss happens
+ *   write_hit - a string containing the behavior in case of store hit
  *
  * Returns:
  *   nothing
@@ -459,6 +497,22 @@ void storeMiss(Cache* mainCache, unsigned index, unsigned tag,  string write_mis
   
 }
 
+
+/*
+ * Performs operations that happen in a store miss depending on parameters for FIFO implementation
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   tag - an unsigned that was not found in cache
+ *   write_miss - a string containing the behavior to perform when a
+ *    store miss happens
+ *   write_hit - a string containing the behavior to perform for store hit
+ *   creation_time - an unsigned integer indicating when the new item in cache will be created
+ *
+ * Returns:
+ *   nothing
+ */
 void fifoStoreMiss(Cache* mainCache, unsigned index, unsigned tag, string write_miss, string write_hit, unsigned creation_time) {
   //write-allocate: load into cache, update line in cache
   if (write_miss == "write-allocate") {
@@ -480,7 +534,7 @@ void fifoStoreMiss(Cache* mainCache, unsigned index, unsigned tag, string write_
 
 
 /*
- * Performs operations that happen in a store hit
+ * Performs operations that happen in a store hit for LRU implementation
  * 
  * Parameters:
  *   mainCache - a pointer to the cache to be affected
@@ -512,6 +566,19 @@ void lruStoreHit(Cache* mainCache, unsigned index, unsigned tag, string write_hi
 }
 
 
+/*
+ * Performs operations that happen in a store hit for FIFO implementation
+ * 
+ * Parameters:
+ *   mainCache - a pointer to the cache to be affected
+ *   index - an unsigned indicating the index in the cache to affect
+ *   write_hit - a string indicaitng what behavior to perform when a 
+ *    write_hit occurs
+ *   slot_index - an unsigned indicating the specific slot to affect
+ *
+ * Returns:
+ *   nothing
+ */
 void fifoStoreHit(Cache* mainCache, unsigned index, unsigned slot_index, string write_hit) {
   //write-through: write immediately to memory
   if (write_hit == "write-through") {
@@ -543,18 +610,22 @@ void loadDecisions(Cache* mainCache, int key_count, unsigned index, unsigned tag
   //load miss
   if (key_count <= 0) {
     mainCache->load_misses++;
+    //if "lru" selected then do the proper operations
     if (eviction_type == "lru") {
       lruLoadMiss(mainCache, index, tag);
     } else  {
+      //otherwise do the proper fifo operations
       fifoLoadMiss(mainCache, index, tag, creation_time);
     }
     //load---- hit
   } else {
     mainCache->load_hits++;
     slot_index = mainCache->sets[index].directory[tag];
+    //if "lru" selected then do the proper operations
     if (eviction_type == "lru") {
       lruLoadHit(mainCache, index, slot_index);
     } else {
+      //otherwise do the proper fifo operations
       fifoLoadHit(mainCache);
     }
     
@@ -585,18 +656,22 @@ void storeDecisions(Cache* mainCache, int key_count, unsigned index, unsigned ta
   //store miss
   if (key_count <= 0) {
     mainCache->store_misses++;
+    //if "lru" selected then do the proper operations
     if (eviction_type == "lru") {
       storeMiss(mainCache, index, tag, write_miss, write_hit);
     } else  {
+      //otherwise do the proper fifo operations
       fifoStoreMiss(mainCache, index, tag, write_miss, write_hit, creation_time);
     }
     //store-hit
   } else {
     mainCache->store_hits++;
     slot_index = mainCache->sets[index].directory[tag];
+    //if "lru" selcted then do the proper operations
     if (eviction_type == "lru") {
       lruStoreHit(mainCache, index, tag, write_hit, slot_index);
     } else {
+      //otherwise do the proper fifo operations
       fifoStoreHit(mainCache, index, slot_index, write_hit);
     }
   }
@@ -624,10 +699,10 @@ void loadStoreWork(Cache* mainCache, unsigned index, unsigned tag, char load_sto
   //search the set to find the index of the slot that has the tag
   int key_count = mainCache->sets[index].directory.count(tag);
   
-  //loading
+  //if loading do the proper operations
   if (load_store == 'l') {
     loadDecisions(mainCache, key_count, index, tag, eviction_type, creation_time);
-    //store
+    //otherwise do the proper storing operations
   } else {
     
     storeDecisions(mainCache, key_count, index, tag, write_miss, write_hit, eviction_type, creation_time);
@@ -653,6 +728,8 @@ int main(int argc, char* argv[]) {
     cerr << "error: invalid number of parameters";
     return 1;
   }
+  
+  //store inputted info int their proper spots
   int num_sets = atoi(argv[1]);
   int block_size = atoi(argv[2]);
   int num_block_bytes = atoi(argv[3]);
@@ -666,6 +743,7 @@ int main(int argc, char* argv[]) {
   string block = argv[2];
   string block_bytes = argv[3];
 
+  //checks to see if any invalid combinations inputted if so prints error and returns 1
   if (invalids(num_sets, block_size, num_block_bytes, write_hit, write_miss, eviction_type, set, block, block_bytes) == 1) {
     return 1;
   }
@@ -673,12 +751,14 @@ int main(int argc, char* argv[]) {
   //set up the cache
   Cache mainCache;
   cache_setup(&mainCache, num_sets, block_size, num_block_bytes);
-  
+
+  //variables for valuable info
   char load_store;
   string address;
   string third_var;
   string line;
 
+  // variable that dictates when the info on a particular block was put there/created
   unsigned creation_time = 1;
   
   while (getline(cin,line)) {
@@ -711,12 +791,14 @@ int main(int argc, char* argv[]) {
       index = stoi(index_str, 0, 2);
     }
 
-    
+    // gives all relevant info and decides what operation should be taken based on current parameters
     loadStoreWork(&mainCache, index, tag, load_store, write_miss, write_hit, eviction_type, creation_time);
-    
+    // increase creation time variable by 1
     creation_time++;
     
   }
+
+  //prints all the final stats in a nice and easy to read format
   final_print(&mainCache);
   return 0;
 }
