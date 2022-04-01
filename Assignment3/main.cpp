@@ -1,6 +1,6 @@
 /*
  * Cache Simulation Program
- * CSF Assignment 3 Milestone 2
+ * CSF Assignment 3 Milestone 3
  * Ricardo Morales Gonzalez  rmorale5@jhu.edu
  * Ana Kuri  akuri1@jhu.edu
  */

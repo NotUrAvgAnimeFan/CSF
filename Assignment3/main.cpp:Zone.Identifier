@@ -1,0 +1,3 @@
+[ZoneTransfer]
+ZoneId=3
+HostUrl=https://production-gradescope-uploads.s3-us-west-2.amazonaws.com/uploads/text_file/file/285593310/main.cpp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIGIENPBVZV37ZJPA%2F20220401%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220401T011213Z&X-Amz-Expires=10800&X-Amz-SignedHeaders=host&X-Amz-Signature=3244ea23c76084c174e3c92de2deb62ec64098d7884fc1066a43e19a1d9b46c0

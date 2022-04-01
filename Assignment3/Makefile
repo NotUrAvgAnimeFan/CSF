@@ -1,4 +1,4 @@
-# CSF Assignment 3 Milestone 2
+# CSF Assignment 3 Milestone 3
 # Ricardo Morales Gonzalez rmorale5@jhu.edu
 # Ana Kur  akuri1@jhu.edu
 # Makefile for CSF Assignment 3
