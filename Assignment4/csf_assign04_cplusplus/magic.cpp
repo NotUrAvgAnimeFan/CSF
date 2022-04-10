@@ -33,6 +33,58 @@ void printHeaderStats(Elf64_Ehdr *elf_header) {
   
 }
 
+void printSymbolStats(Elf64_Shdr* section_header, uint8_t section_with_symTab, Elf64_Sym* symTab, Elf64_Sym* strTab) {
+  uint8_t numSym = section_header[section_with_symTab].sh_size / section_header[section_with_symTab].sh_entsize;
+
+  uint8_t counter = 0;
+
+  while (counter < numSym) {
+    printf("Symbol %d: name=%s, size=%lx, info=%lx, other=%lx\n", counter, (char *)strTab + symTab[counter].st_name, symTab[counter].st_size, symTab[counter].st_info, symTab[counter].st_other);
+    counter++;
+  }
+}
+
+void printSectionStats(Elf64_Ehdr *elf_header) {
+  Elf64_Shdr *section_header = (Elf64_Shdr*)((char*)elf_header + elf_header->e_shoff);
+  
+  
+  Elf64_Shdr *section_with_names = &section_header[elf_header->e_shstrndx];
+  uint8_t counter = 0;
+  Elf64_Shdr *start_names = (Elf64_Shdr*)(section_with_names->sh_offset + (char*)elf_header);  
+  
+  Elf64_Sym *symTab;
+  Elf64_Sym *strTab;
+  uint8_t section_with_symTab;
+  while (counter < elf_header->e_shnum) {
+    
+    printf("Section header %d: name=%s, type=%lx, offset=%lx, size=%lx\n", counter, (char*)start_names + section_header[counter].sh_name , section_header[counter].sh_type, section_header[counter].sh_offset, section_header[counter].sh_size);
+    
+    if (section_header[counter].sh_type == 2) {
+      symTab = (Elf64_Sym*)((char*)elf_header + section_header[counter].sh_offset);
+      section_with_symTab = counter;
+    }
+    if (strcmp(".strtab",(char*)start_names + section_header[counter].sh_name) == 0) {
+      strTab = (Elf64_Sym*)(section_header[counter].sh_offset + (unsigned char*)elf_header);
+    }
+    
+    counter += 1;
+    
+  }
+
+  printSymbolStats(section_header, section_with_symTab, symTab, strTab);
+
+  /*
+  uint8_t numSym = section_header[section_with_symTab].sh_size / section_header[section_with_symTab].sh_entsize;
+
+  counter = 0;
+
+  while (counter < numSym) {
+    printf("Symbol %d: name=%s, size=%lx, info=%lx, other=%lx\n", counter, (char *)strTab + symTab[counter].st_name, symTab[counter].st_size, symTab[counter].st_info, symTab[counter].st_other);
+    counter++;
+  }
+  */
+}
+
 
 int main(int argc, char **argv) {
   // TODO: implement
@@ -40,7 +92,7 @@ int main(int argc, char **argv) {
   int fd = open(argv[1], O_RDONLY);
 
   if (fd < 0) {
-    cerr << "could not open file";
+    cerr << "could not open file\n";
     return -1;
   }
 
@@ -50,7 +102,7 @@ int main(int argc, char **argv) {
   if (rc != 0) {
 
     //error
-    cerr << "could not get info on file";
+    cerr << "could not get info on file\n";
     return -2;
   } else {
     file_size = statbuf.st_size;
@@ -59,7 +111,7 @@ int main(int argc, char **argv) {
   void *data = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
 
   if (data == ((void *)-1)) {
-    cerr << "could not get contents of file";
+    cerr << "could not get contents of file\n";
     return -3;
   }
 
@@ -72,6 +124,10 @@ int main(int argc, char **argv) {
 
   printHeaderStats(elf_header);
 
+  printSectionStats(elf_header);
+
+  
+  /*
   Elf64_Shdr *section_header = (Elf64_Shdr*)((char*)elf_header + elf_header->e_shoff);
 
   
@@ -107,6 +163,6 @@ int main(int argc, char **argv) {
     printf("Symbol %d: name=%s, size=%lx, info=%lx, other=%lx\n", counter, (char *)strTab + symTab[counter].st_name, symTab[counter].st_size, symTab[counter].st_info, symTab[counter].st_other);
     counter++;
   }
-  
+  */
   
 }
