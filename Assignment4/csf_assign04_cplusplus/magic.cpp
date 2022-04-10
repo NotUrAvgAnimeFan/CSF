@@ -89,6 +89,15 @@ int main(int argc, char **argv) {
   }
 
   
+  counter = 0;
+  uint8_t symbol_counter_top;
+  uint8_t symbol_counter_current;
+  while (counter < elf_header->e_shnum) {
+    symbol_counter_top = section_header[counter].sh_size / section_header[counter].sh_entsize;
+    
+    
+    
+  }
   
   
 }
