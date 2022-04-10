@@ -76,27 +76,36 @@ int main(int argc, char **argv) {
 
   
   Elf64_Shdr *section_with_names = &section_header[elf_header->e_shstrndx];
-  //data + section_wit_names->sh_offset + sec_header->sh_name;
   uint8_t counter = 0;
   Elf64_Shdr *start_names = (Elf64_Shdr*)(section_with_names->sh_offset + (char*)elf_header);  
-  //char nameOfSection[4] = {'y', 'e', 's', '\0'};
   
+  Elf64_Sym *symTab;
+  Elf64_Sym *strTab;
+  uint8_t section_with_symTab;
+  uint8_t section_with_strTab;
   while (counter < elf_header->e_shnum) {
     
     printf("Section header %d: name=%s, type=%lx, offset=%lx, size=%lx\n", counter, (char*)start_names + section_header[counter].sh_name , section_header[counter].sh_type, section_header[counter].sh_offset, section_header[counter].sh_size);
+
+    if (section_header[counter].sh_type == 2) {
+      symTab = (Elf64_Sym*)((char*)elf_header + section_header[counter].sh_offset);
+      section_with_symTab = counter;
+    }
+    if (strcmp(".strtab",(char*)start_names + section_header[counter].sh_name) == 0) {
+      strTab = (Elf64_Sym*)(section_header[counter].sh_offset + (unsigned char*)elf_header);
+    }
+     
     counter += 1;
 
   }
 
-  
+  uint8_t numSym = section_header[section_with_symTab].sh_size / section_header[section_with_symTab].sh_entsize;
+
   counter = 0;
-  uint8_t symbol_counter_top;
-  uint8_t symbol_counter_current;
-  while (counter < elf_header->e_shnum) {
-    symbol_counter_top = section_header[counter].sh_size / section_header[counter].sh_entsize;
-    
-    
-    
+
+  while (counter < numSym) {
+    printf("Symbol %d: name=%s, size=%lx, info=%lx, other=%lx\n", counter, (char *)strTab + symTab[counter].st_name, symTab[counter].st_size, symTab[counter].st_info, symTab[counter].st_other);
+    counter++;
   }
   
   
