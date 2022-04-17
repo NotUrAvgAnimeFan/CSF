@@ -23,10 +23,16 @@ int main(int argc, char **argv) {
 
   // TODO: connect to server
 
+  
+
   // TODO: send slogin message
+
+
 
   // TODO: loop reading commands from user, sending messages to
   //       server as appropriate
 
+
+  
   return 0;
 }

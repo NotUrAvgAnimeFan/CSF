@@ -18,35 +18,54 @@ Connection::Connection(int fd)
 }
 
 void Connection::connect(const std::string &hostname, int port) {
+  std::string str;
+  stringstream ss;
+  ss << port;
+  ss >> str;
+
   // TODO: call open_clientfd to connect to the server
-  m_fd(open_clientf(hostname, &port));
+  m_fd = open_clientf(hostname, &str);
   // TODO: call rio_readinitb to initialize the rio_t object
-  rio_readinitb(&m_fdbuf, m_fd)
+  rio_readinitb(&m_fdbuf, m_fd);
 
   
 }
 
 Connection::~Connection() {
   // TODO: close the socket if it is open
-  close(m_fd);
+  if (m_fd != 0) {
+    close(m_fd);
+  }
 }
 
 bool Connection::is_open() const {
   // TODO: return true if the connection is open
+  if (m_fd != 0) {
+    return true;
+  }
 }
 
 void Connection::close() {
   // TODO: close the connection if it is open
+  if (is_open()) {
+    close(m_fd);
+  }
+  
 }
 
 bool Connection::send(const Message &msg) {
   // TODO: send a message
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
+  
+  
 }
+
 
 bool Connection::receive(Message &msg) {
   // TODO: send a message, storing its tag and data in msg
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
+
+
 }
