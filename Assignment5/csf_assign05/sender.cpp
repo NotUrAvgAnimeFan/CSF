@@ -22,11 +22,16 @@ int main(int argc, char **argv) {
   username = argv[3];
 
   // TODO: connect to server
-
+  Connection conn;
+  conn.connect(server_hostname, server_port);
+  
   
 
   // TODO: send slogin message
-
+  Message slogin;
+  slogin.tag = TAG_SLOGIN;
+  slogin.data = username;
+  conn.send(slogin);
 
 
   // TODO: loop reading commands from user, sending messages to

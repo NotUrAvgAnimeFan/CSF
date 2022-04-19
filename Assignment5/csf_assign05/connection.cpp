@@ -19,12 +19,12 @@ Connection::Connection(int fd)
 
 void Connection::connect(const std::string &hostname, int port) {
   std::string str;
-  stringstream ss;
+  std::stringstream ss;
   ss << port;
   ss >> str;
 
   // TODO: call open_clientfd to connect to the server
-  m_fd = open_clientfd(hostname, &str);
+  m_fd = open_clientfd(hostname.c_str(), str.c_str());
   // TODO: call rio_readinitb to initialize the rio_t object
   rio_readinitb(&m_fdbuf, m_fd);
 
@@ -34,21 +34,19 @@ void Connection::connect(const std::string &hostname, int port) {
 Connection::~Connection() {
   // TODO: close the socket if it is open
   if (m_fd != 0) {
-    close(m_fd);
+    Close(m_fd);
   }
 }
 
 bool Connection::is_open() const {
   // TODO: return true if the connection is open
-  if (m_fd != 0) {
-    return true;
-  }
+  return m_fd != 0;
 }
 
 void Connection::close() {
   // TODO: close the connection if it is open
   if (is_open()) {
-    close(m_fd);
+    Close(m_fd);
   }
   
 }
@@ -58,10 +56,12 @@ bool Connection::send(const Message &msg) {
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
 
-  int num_written = rio_writen(m_fd,msg,msg.MAX_LEN);
-
+  int num_tag = rio_writen(m_fd, &msg.tag, msg.tag.size());
+  int num_data = rio_writen(m_fd, &msg.data, msg.data.size());
+  rio_writen(m_fd, "\n", 1);
+  
   //message sent unsuccessfully
-  if (num_written == -1) {
+  if (num_tag == -1 || num_data == -1) {
     //format of received meessage invalid
     if (msg.tag == TAG_ERR) {
       m_last_result = INVALID_MSG;
@@ -84,8 +84,10 @@ bool Connection::receive(Message &msg) {
   // TODO: send a message, storing its tag and data in msg
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
+  
   rio_readinitb(&m_fdbuf, m_fd);
-  int num_read =  rio_readlineb(&m_fdbuf,msg, msg.MAX_LEN);
+  char buf[msg.MAX_LEN];
+  int num_read =  rio_readlineb(&m_fdbuf, buf, sizeof(buf));
 
   //message received unsuccessfully
   if (num_read == -1) {
@@ -101,7 +103,7 @@ bool Connection::receive(Message &msg) {
     return false;
   }
 
-  //message received successfully 
+  //message received successfully, store tag and data
   m_last_result = SUCCESS;
   return true;
 }
