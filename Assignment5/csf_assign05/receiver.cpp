@@ -28,7 +28,10 @@ int main(int argc, char **argv) {
   // TODO: send rlogin and join messages (expect a response from
   //       the server for each one)
   
-  conn.send();
+  Message rlogin;
+  rlogin.tag = TAG_RLOGIN;
+  rlogin.data = username;
+  conn.send(rlogin);
 
 
 
