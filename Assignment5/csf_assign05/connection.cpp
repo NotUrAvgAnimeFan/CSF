@@ -33,14 +33,14 @@ void Connection::connect(const std::string &hostname, int port) {
 
 Connection::~Connection() {
   // TODO: close the socket if it is open
-  if (m_fd != 0) {
+  if (m_fd >= 0) {
     Close(m_fd);
   }
 }
 
 bool Connection::is_open() const {
   // TODO: return true if the connection is open
-  return m_fd != 0;
+  return m_fd >= 0;
 }
 
 void Connection::close() {
@@ -56,20 +56,26 @@ bool Connection::send(const Message &msg) {
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
 
-  int num_tag = rio_writen(m_fd, &msg.tag, msg.tag.size());
+  std::string tag = &msg.tag;
+
+  if (tag != TAG_ERR || tag != TAG_OK || tag != TAG_SLOGIN || tag != TAG_RLOGIN || tag != TAG_JOIN || tag != TAG_LEAVE || tag != TAG_SENDALL || tag != TAG_QUIT || tag != TAG_DELIVERY) {
+    m_last_result = INVALID_MSG;
+    return false;
+  }
+  
+  
+  int num_tag = rio_writen(m_fd, tag, msg.tag.size());
+  rio_writen(m_fd, ":", 1);
   int num_data = rio_writen(m_fd, &msg.data, msg.data.size());
   rio_writen(m_fd, "\n", 1);
   
+
+  
   //message sent unsuccessfully
   if (num_tag == -1 || num_data == -1) {
-    //format of received meessage invalid
-    if (msg.tag == TAG_ERR) {
-      m_last_result = INVALID_MSG;
     
     //I/O or EOF error
-    } else {
     m_last_result = EOF_OR_ERROR;
-    }
     
     return false;
   }

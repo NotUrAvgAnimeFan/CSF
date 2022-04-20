@@ -62,7 +62,7 @@ receiver : $(CXX_RECEIVER_OBJS) $(CXX_COMMON_OBJS) $(CXX_CLIENT_OBJS) $(C_COMMON
 .PHONY: solution.zip
 solution.zip :
 	rm -f $@
-	zip -9r $@ Makefile *.cpp *.c README.txt
+	zip -9r $@ Makefile *.cpp *.c *.h README.txt
 
 clean :
 	rm -f *.o depend.mak

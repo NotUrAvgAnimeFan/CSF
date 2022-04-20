@@ -26,6 +26,8 @@ struct Message {
     // TODO: split the message data into fields separated by ':', add them
     //       to result vector
     
+
+}
     
     
     return result;

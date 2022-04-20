@@ -28,14 +28,20 @@ int main(int argc, char **argv) {
   
 
   // TODO: send slogin message
-  Message slogin;
-  slogin.tag = TAG_SLOGIN;
-  slogin.data = username;
+  Message slogin = new Message(TAG_SLOGIN, username);
   conn.send(slogin);
 
 
   // TODO: loop reading commands from user, sending messages to
   //       server as appropriate
+
+  std::string input;
+  Message toSend;
+  while(getline(std::cin, input)) {
+    toSend = new Message("", input);
+    std::vector<std::string> tagAndPayload = toSend.split_payload();
+    
+  }
 
 
   

@@ -28,9 +28,7 @@ int main(int argc, char **argv) {
   // TODO: send rlogin and join messages (expect a response from
   //       the server for each one)
   
-  Message rlogin;
-  rlogin.tag = TAG_RLOGIN;
-  rlogin.data = username;
+  Message rlogin = new Message(TAG_RLOGIN, username);
   conn.send(rlogin);
 
 
@@ -38,7 +36,11 @@ int main(int argc, char **argv) {
   // TODO: loop waiting for messages from server
   //       (which should be tagged with TAG_DELIVERY)
 
-
+  Message received;
+  
+  while(conn.receive(received) && (receive.tag.compare(TAG_DELIVERY) == 0)) {
+    
+  }
   
 
 
