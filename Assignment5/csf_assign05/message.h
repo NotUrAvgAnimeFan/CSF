@@ -26,12 +26,24 @@ struct Message {
     // TODO: split the message data into fields separated by ':', add them
     //       to result vector
     
+    std::string readTag;
+    std::string readData;
 
-}
+    std::stringstream s(data);
+
+    std::getline(s, readTag, ':');
+    std::getline(s, readData);
     
+    tag = readTag;
+    data = readData;
+
+    result.push_back(readTag);
+    result.push_back(readData);
     
     return result;
+    
   }
+  
 };
 
 // standard message tags (note that you don't need to worry about

@@ -31,15 +31,44 @@ int main(int argc, char **argv) {
   Message slogin = new Message(TAG_SLOGIN, username);
   conn.send(slogin);
 
+  Message sloginResult;
+  conn.receive(sloginResult);
+  if (sloginResult.tag == sloginResult.TAG_ERR) {
+      cerr << sloginResult.data << endl;
+      return 1;
+    };
+  
+  
 
   // TODO: loop reading commands from user, sending messages to
   //       server as appropriate
 
   std::string input;
   Message toSend;
+  Message received;
+  
   while(getline(std::cin, input)) {
-    toSend = new Message("", input);
-    std::vector<std::string> tagAndPayload = toSend.split_payload();
+    if (input[0] == '/') {
+      if (input.substr(1,4) == "join") {
+	toSend = new Message(sloginResult.TAG_JOIN, input.substr(6));
+      } else if (input == "/leave") {
+	toSend = new Message(sloginResult.TAG_LEAVE, "");
+      } else if (input == "/quit") {
+	toSend = new Message(sloginResult.TAG_QUIT, "");
+      } else {
+	cerr << "command not defined" << endl;
+	continue;
+      }
+      
+    } else {
+      toSend = new Message(sloginResult.TAG_SENDALL, input);
+    }
+    
+    conn.send(toSend);
+    conn.receive(received);
+    
+    
+
     
   }
 

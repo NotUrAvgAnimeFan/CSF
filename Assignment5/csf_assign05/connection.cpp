@@ -87,7 +87,7 @@ bool Connection::send(const Message &msg) {
 
 
 bool Connection::receive(Message &msg) {
-  // TODO: send a message, storing its tag and data in msg
+  // TODO: receive a message, storing its tag and data in msg
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
   
@@ -97,18 +97,20 @@ bool Connection::receive(Message &msg) {
 
   //message received unsuccessfully
   if (num_read == -1) {
-    //format of received meessage invalid
-    if (msg.tag == TAG_ERR) {
-      m_last_result = INVALID_MSG;
-    
-    //I/O or EOF error
-    } else {
+
     m_last_result = EOF_OR_ERROR;
-    }
+    
     
     return false;
   }
 
+  //putting everything received in data section of message
+  msg = new Message("", buf);
+
+  //split data into tag and data fields and get vector of strings back
+  msg.split_payload();  
+
+  
   //message received successfully, store tag and data
   m_last_result = SUCCESS;
   return true;
