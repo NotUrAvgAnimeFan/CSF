@@ -12,86 +12,86 @@ int main(int argc, char **argv) {
     std::cerr << "Usage: ./sender [server_address] [port] [username]\n";
     return 1;
   }
-
+  
   std::string server_hostname;
   int server_port;
   std::string username;
-
+  
   server_hostname = argv[1];
   server_port = std::stoi(argv[2]);
   username = argv[3];
-
+  
   // TODO: connect to server
   Connection conn;
-  conn.connect(server_hostname, server_port)
+  conn.connect(server_hostname, server_port);
   
-  if (!(con.is_open())) {
-    cerr << "connection could not be established" << endl;
+  if (!(conn.is_open())) {
+    std::cerr << "connection could not be established" << std::endl;
     return 1; 
   }
   
-
+  
   // TODO: send slogin message
-  Message slogin = new Message(TAG_SLOGIN, username);
-  if (!(conn.send(slogin)) {
-      if (conn.m_last_result == conn.INVALID_MSG) {
-	cerr << "INVALID username" << endl;
-	return 1;
-      } else {
-	cerr << "username could not be sent" << endl;
-	return 1;
-      }
-    };
-
+  Message slogin(TAG_SLOGIN, username);
+  if (!(conn.send(slogin))) {
+    if (conn.get_last_result() == conn.INVALID_MSG) {
+      std::cerr << "INVALID username" << std::endl;
+      return 1;
+    } else {
+      std::cerr << "username could not be sent" << std::endl;
+      return 1;
+    }
+  }
+  
   
   Message sloginResult;
   conn.receive(sloginResult);
-  if (sloginResult.tag == sloginResult.TAG_ERR) {
-      cerr << sloginResult.data << endl;
-      return 1;
-    };
+  if (sloginResult.tag == "err") {
+    std::cerr << sloginResult.data << std::endl;
+    return 1;
+  }
   
   
-
+  
   // TODO: loop reading commands from user, sending messages to
   //       server as appropriate
-
+  
   std::string input;
   Message toSend;
   Message received;
   
   while(getline(std::cin, input)) {
-
+    
     if (input[0] == '/') {
       if (input.substr(1,4) == "join") {
-	toSend = new Message(sloginResult.TAG_JOIN, input.substr(6));
+	toSend = Message("join", input.substr(6));
       } else if (input == "/leave") {
-	toSend = new Message(sloginResult.TAG_LEAVE, "");
+	toSend = Message("leave", "");
       } else if (input == "/quit") {
-	toSend = new Message(sloginResult.TAG_QUIT, "");
+	toSend = Message("quit", "");
       } else {
-	cerr << "command not defined" << endl;
+	std::cerr << "command not defined" << std::endl;
 	continue;
       }
       
     } else {
-      toSend = new Message(sloginResult.TAG_SENDALL, input);
+      toSend = Message("sendall", input);
     }
 
     
-    if (conn.send(toSend);) {
+    if (conn.send(toSend)) {
     
       conn.receive(received);
       
-      if (received.tag == received.TAG_ERR) {
-	cerr << received.data << endl;
+      if (received.tag == "err") {
+	std::cerr << received.data << std::endl;
       }
       
-    } else if (conn.m_last_result == conn.INVALID_MSG) {
-      cerr << "invalid tag used or total message sized exceeded 250 characters" << endl;
+    } else if (conn.get_last_result() == conn.INVALID_MSG) {
+      std::cerr << "invalid tag used or total message sized exceeded 250 characters" << std::endl;
       
     } else {
-      cerr << "message send was unsuccessful" << endl;
+      std::cerr << "message send was unsuccessful" << std::endl;
     }
     
   }

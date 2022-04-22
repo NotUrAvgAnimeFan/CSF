@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <sstream>
 #include "csapp.h"
 #include "message.h"
 #include "connection.h"
@@ -28,23 +29,23 @@ int main(int argc, char **argv) {
   // TODO: send rlogin and join messages (expect a response from
   //       the server for each one)
   
-  Message rlogin = new Message(TAG_RLOGIN, username);
+  Message rlogin("rlogin", username);
   conn.send(rlogin);
 
   Message rloginResult;
   conn.receive(rloginResult);
-  if (rloginResult.tag == rloginResult.TAG_ERR) {
-    cerr << rloginResult.data << endl;
+  if (rloginResult.tag == "err") {
+    std::cerr << rloginResult.data << std::endl;
     return 1;
   }
 
-  Message join = new Message(rlogin.TAG_JOIN, room_name);
+  Message join("join", room_name);
   Message joinResult;
   
   conn.receive(joinResult);
 
-  if (joinResult.tag == joinResult.TAG_ERR) {
-    cerr << joinResult.data << endl;
+  if (joinResult.tag == "err") {
+    std::cerr << joinResult.data << std::endl;
     return 2;
   }
 
@@ -59,13 +60,13 @@ int main(int argc, char **argv) {
   
   while(conn.receive(received)) {
 
-    if (received.tag == received.TAG_DELIVERY) {
+    if (received.tag == "delivery") {
       std::stringstream s(received.data);
       getline(s, room, ':');
       getline(s, sender, ':');
       getline(s, message);
 
-      cout << sender << ': ' << message << endl;
+      std::cout << sender << ": "<< message << std::endl;
     } 
     
     

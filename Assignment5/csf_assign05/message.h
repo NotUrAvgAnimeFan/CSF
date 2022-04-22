@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 
 struct Message {
   // An encoded message may have at most this many characters,
@@ -34,9 +35,6 @@ struct Message {
     std::getline(s, readTag, ':');
     std::getline(s, readData);
     
-    tag = readTag;
-    data = readData;
-
     result.push_back(readTag);
     result.push_back(readData);
     

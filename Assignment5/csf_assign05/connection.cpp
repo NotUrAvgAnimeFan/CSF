@@ -56,7 +56,7 @@ bool Connection::send(const Message &msg) {
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
 
-  std::string tag = &msg.tag;
+  std::string tag = msg.tag;
 
   if (tag != TAG_SLOGIN && tag != TAG_RLOGIN && tag != TAG_JOIN && tag != TAG_LEAVE && tag != TAG_SENDALL && tag != TAG_QUIT ) {
     m_last_result = INVALID_MSG;
@@ -64,18 +64,19 @@ bool Connection::send(const Message &msg) {
   }
 
   std::string complete = tag + ':' + msg.data;
-
+  const void* pointer= &complete;
+  
   if (complete.size() > msg.MAX_LEN) {
     m_last_result = INVALID_MSG;
     return false;
   }
   
   
-  int wasSent = rio_writen(m_fd, complete, complete.size());
+  int num_data = rio_writen(m_fd, pointer, complete.size());
   
   
   //message sent unsuccessfully
-  if (num_tag == -1 || num_data == -1) {
+  if (num_data == -1) {
     
     //I/O or EOF error
     m_last_result = EOF_OR_ERROR;
@@ -98,6 +99,8 @@ bool Connection::receive(Message &msg) {
   char buf[msg.MAX_LEN];
   int num_read =  rio_readlineb(&m_fdbuf, buf, sizeof(buf));
 
+  std::string messageReceived = buf;
+  std::string nothing = "";
   //message received unsuccessfully
   if (num_read == -1) {
 
@@ -108,10 +111,11 @@ bool Connection::receive(Message &msg) {
   }
 
   //putting everything received in data section of message
-  msg = new Message("", buf);
+  msg = Message(nothing, messageReceived);
 
   //split data into tag and data fields and get vector of strings back
-  msg.split_payload();  
+  std::vector<std::string> result = msg.split_payload();
+  msg = Message(result[0], result[1]);
 
   
   //message received successfully, store tag and data
