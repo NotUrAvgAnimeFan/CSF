@@ -58,18 +58,21 @@ bool Connection::send(const Message &msg) {
 
   std::string tag = &msg.tag;
 
-  if (tag != TAG_ERR || tag != TAG_OK || tag != TAG_SLOGIN || tag != TAG_RLOGIN || tag != TAG_JOIN || tag != TAG_LEAVE || tag != TAG_SENDALL || tag != TAG_QUIT || tag != TAG_DELIVERY) {
+  if (tag != TAG_SLOGIN && tag != TAG_RLOGIN && tag != TAG_JOIN && tag != TAG_LEAVE && tag != TAG_SENDALL && tag != TAG_QUIT ) {
+    m_last_result = INVALID_MSG;
+    return false;
+  }
+
+  std::string complete = tag + ':' + msg.data;
+
+  if (complete.size() > msg.MAX_LEN) {
     m_last_result = INVALID_MSG;
     return false;
   }
   
   
-  int num_tag = rio_writen(m_fd, tag, msg.tag.size());
-  rio_writen(m_fd, ":", 1);
-  int num_data = rio_writen(m_fd, &msg.data, msg.data.size());
-  rio_writen(m_fd, "\n", 1);
+  int wasSent = rio_writen(m_fd, complete, complete.size());
   
-
   
   //message sent unsuccessfully
   if (num_tag == -1 || num_data == -1) {

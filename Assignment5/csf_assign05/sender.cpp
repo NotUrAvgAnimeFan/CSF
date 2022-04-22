@@ -23,14 +23,27 @@ int main(int argc, char **argv) {
 
   // TODO: connect to server
   Connection conn;
-  conn.connect(server_hostname, server_port);
+  conn.connect(server_hostname, server_port)
   
+  if (!(con.is_open())) {
+    cerr << "connection could not be established" << endl;
+    return 1; 
+  }
   
 
   // TODO: send slogin message
   Message slogin = new Message(TAG_SLOGIN, username);
-  conn.send(slogin);
+  if (!(conn.send(slogin)) {
+      if (conn.m_last_result == conn.INVALID_MSG) {
+	cerr << "INVALID username" << endl;
+	return 1;
+      } else {
+	cerr << "username could not be sent" << endl;
+	return 1;
+      }
+    };
 
+  
   Message sloginResult;
   conn.receive(sloginResult);
   if (sloginResult.tag == sloginResult.TAG_ERR) {
@@ -48,6 +61,7 @@ int main(int argc, char **argv) {
   Message received;
   
   while(getline(std::cin, input)) {
+
     if (input[0] == '/') {
       if (input.substr(1,4) == "join") {
 	toSend = new Message(sloginResult.TAG_JOIN, input.substr(6));
@@ -63,12 +77,22 @@ int main(int argc, char **argv) {
     } else {
       toSend = new Message(sloginResult.TAG_SENDALL, input);
     }
-    
-    conn.send(toSend);
-    conn.receive(received);
-    
-    
 
+    
+    if (conn.send(toSend);) {
+    
+      conn.receive(received);
+      
+      if (received.tag == received.TAG_ERR) {
+	cerr << received.data << endl;
+      }
+      
+    } else if (conn.m_last_result == conn.INVALID_MSG) {
+      cerr << "invalid tag used or total message sized exceeded 250 characters" << endl;
+      
+    } else {
+      cerr << "message send was unsuccessful" << endl;
+    }
     
   }
 
