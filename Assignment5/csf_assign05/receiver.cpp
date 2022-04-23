@@ -32,8 +32,9 @@ int main(int argc, char **argv) {
   Message rlogin("rlogin", username);
   conn.send(rlogin);
 
-  Message rloginResult;
+  Message rloginResult("", "");
   conn.receive(rloginResult);
+  
   if (rloginResult.tag == "err") {
     std::cerr << rloginResult.data << std::endl;
     return 1;

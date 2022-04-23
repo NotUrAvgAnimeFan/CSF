@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <sstream>
 #include <cctype>
 #include <cassert>
@@ -25,6 +27,14 @@ void Connection::connect(const std::string &hostname, int port) {
 
   // TODO: call open_clientfd to connect to the server
   m_fd = open_clientfd(hostname.c_str(), str.c_str());
+
+  if (m_fd < 0) {
+    std::cout << "file descriptor not open" << std::endl;
+  } else {
+    std::cout << "file descriptor open" << std::endl;
+  }
+  
+
   // TODO: call rio_readinitb to initialize the rio_t object
   rio_readinitb(&m_fdbuf, m_fd);
 
@@ -76,7 +86,7 @@ bool Connection::send(const Message &msg) {
   
   
   //message sent unsuccessfully
-  if (num_data == -1) {
+  if (num_data < 0) {
     
     //I/O or EOF error
     m_last_result = EOF_OR_ERROR;
@@ -94,15 +104,35 @@ bool Connection::receive(Message &msg) {
   // TODO: receive a message, storing its tag and data in msg
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
-  
-  rio_readinitb(&m_fdbuf, m_fd);
-  char buf[msg.MAX_LEN];
-  int num_read =  rio_readlineb(&m_fdbuf, buf, sizeof(buf));
 
-  std::string messageReceived = buf;
-  std::string nothing = "";
+  rio_t something;
+  //rio_readinitb(&something, m_fd);
+  
+  char msg_buf[msg.MAX_LEN];
+  size_t len = rio_readlineb(&something, msg_buf, sizeof(msg_buf));
+
+  if (len < 0) {
+    m_last_result = EOF_OR_ERROR;
+    return false;
+  }
+
+  std::string temp = std::string(msg_buf);
+  return true;
+
+  /*
+  
+  std::cout << "now inside receive function of connection.cpp" << std::endl;
+  
+  char buf[msg.MAX_LEN];
+
+  std::cout << "created place to store message coming from server" << std::endl;
+
+  size_t num_read = rio_readlineb(m_fdbuf, buf, sizeof(buf)); //stalls here and doesn't continue
+  
+  std::cout << "message successfully read and stored in buf" << std::endl;
+  
   //message received unsuccessfully
-  if (num_read == -1) {
+  if (num_read < 0) {
 
     m_last_result = EOF_OR_ERROR;
     
@@ -110,6 +140,9 @@ bool Connection::receive(Message &msg) {
     return false;
   }
 
+  std::string messageReceived = buf;
+  std::string nothing = "";
+  
   //putting everything received in data section of message
   msg = Message(nothing, messageReceived);
 
@@ -121,4 +154,5 @@ bool Connection::receive(Message &msg) {
   //message received successfully, store tag and data
   m_last_result = SUCCESS;
   return true;
+  */
 }

@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
   
   // TODO: send slogin message
   Message slogin(TAG_SLOGIN, username);
+
   if (!(conn.send(slogin))) {
     if (conn.get_last_result() == conn.INVALID_MSG) {
       std::cerr << "INVALID username" << std::endl;
