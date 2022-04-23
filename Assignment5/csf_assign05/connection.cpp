@@ -1,6 +1,6 @@
 #include <iostream>
+#include <string>
 
-#include <sstream>
 #include <cctype>
 #include <cassert>
 #include "csapp.h"
@@ -20,10 +20,7 @@ Connection::Connection(int fd)
 }
 
 void Connection::connect(const std::string &hostname, int port) {
-  std::string str;
-  std::stringstream ss;
-  ss << port;
-  ss >> str;
+  std::string str = std::to_string(port);
 
   // TODO: call open_clientfd to connect to the server
   m_fd = open_clientfd(hostname.c_str(), str.c_str());
@@ -73,8 +70,8 @@ bool Connection::send(const Message &msg) {
     return false;
   }
 
-  std::string complete = tag + ':' + msg.data;
-  const void* pointer= &complete;
+  std::string complete = tag + ':' + msg.data + '\n';
+  
   
   if (complete.size() > msg.MAX_LEN) {
     m_last_result = INVALID_MSG;
@@ -82,7 +79,7 @@ bool Connection::send(const Message &msg) {
   }
   
   
-  int num_data = rio_writen(m_fd, pointer, complete.size());
+  int num_data = rio_writen(m_fd, complete.c_str(), complete.size());
   
   
   //message sent unsuccessfully
@@ -105,31 +102,12 @@ bool Connection::receive(Message &msg) {
   // return true if successful, false if not
   // make sure that m_last_result is set appropriately
 
-  rio_t something;
-  //rio_readinitb(&something, m_fd);
   
-  char msg_buf[msg.MAX_LEN];
-  size_t len = rio_readlineb(&something, msg_buf, sizeof(msg_buf));
-
-  if (len < 0) {
-    m_last_result = EOF_OR_ERROR;
-    return false;
-  }
-
-  std::string temp = std::string(msg_buf);
-  return true;
-
-  /*
   
-  std::cout << "now inside receive function of connection.cpp" << std::endl;
   
   char buf[msg.MAX_LEN];
 
-  std::cout << "created place to store message coming from server" << std::endl;
-
-  size_t num_read = rio_readlineb(m_fdbuf, buf, sizeof(buf)); //stalls here and doesn't continue
-  
-  std::cout << "message successfully read and stored in buf" << std::endl;
+  size_t num_read = rio_readlineb(&m_fdbuf, buf, sizeof(buf)); //stalls here and doesn't continue
   
   //message received unsuccessfully
   if (num_read < 0) {
@@ -154,5 +132,5 @@ bool Connection::receive(Message &msg) {
   //message received successfully, store tag and data
   m_last_result = SUCCESS;
   return true;
-  */
+  
 }

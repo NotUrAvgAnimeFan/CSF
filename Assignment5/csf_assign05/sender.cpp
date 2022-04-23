@@ -30,10 +30,10 @@ int main(int argc, char **argv) {
     return 1; 
   }
 
-  std::cout << "conneciton to server established" << std::endl;
   
   // TODO: send slogin message
   Message slogin(TAG_SLOGIN, username);
+
   if (!(conn.send(slogin))) {
     if (conn.get_last_result() == conn.INVALID_MSG) {
       std::cerr << "INVALID username" << std::endl;
@@ -44,19 +44,14 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::cout << "slogin message successfully sent" << std::endl;
 
   
-  Message sloginResult;
-  std::cout << "sloginResult message created but nothing in it" << std::endl;
-  
+  Message sloginResult;  
   
   if(!(conn.receive(sloginResult))) {
     
     std::cerr << "slogin result could not be received" << std::endl;
   };
-  
-  std::cout << "slogin result successfully received" << std::endl;
   
   if (sloginResult.tag == "err") {
     std::cerr << sloginResult.data << std::endl;
@@ -98,6 +93,10 @@ int main(int argc, char **argv) {
     if (conn.send(toSend)) {
       
       conn.receive(received);
+
+      if (toSend.tag == "quit") {
+	break;
+      }
       
       if (received.tag == "err") {
 	std::cerr << received.data << std::endl;

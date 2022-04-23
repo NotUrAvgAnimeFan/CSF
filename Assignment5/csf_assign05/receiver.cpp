@@ -20,11 +20,11 @@ int main(int argc, char **argv) {
   std::string room_name = argv[4];
 
   Connection conn;
-
+  
 
   // TODO: connect to server
   conn.connect(server_hostname, server_port);
-
+  std::cout << "connected to server" << std::endl;
   
   // TODO: send rlogin and join messages (expect a response from
   //       the server for each one)
@@ -32,8 +32,11 @@ int main(int argc, char **argv) {
   Message rlogin("rlogin", username);
   conn.send(rlogin);
 
+  std::cout << "sent rlogin request" << std::endl;
+  
   Message rloginResult("", "");
-  conn.receive(rloginResult);
+  conn.receive(rloginResult); //stalls here
+ 
   
   if (rloginResult.tag == "err") {
     std::cerr << rloginResult.data << std::endl;
@@ -41,6 +44,7 @@ int main(int argc, char **argv) {
   }
 
   Message join("join", room_name);
+  conn.send(join);
   Message joinResult;
   
   conn.receive(joinResult);
