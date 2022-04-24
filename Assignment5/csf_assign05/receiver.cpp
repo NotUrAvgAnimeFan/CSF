@@ -24,7 +24,6 @@ int main(int argc, char **argv) {
 
   // TODO: connect to server
   conn.connect(server_hostname, server_port);
-  std::cout << "connected to server" << std::endl;
   
   // TODO: send rlogin and join messages (expect a response from
   //       the server for each one)
@@ -32,8 +31,6 @@ int main(int argc, char **argv) {
   Message rlogin("rlogin", username);
   conn.send(rlogin);
 
-  std::cout << "sent rlogin request" << std::endl;
-  
   Message rloginResult("", "");
   conn.receive(rloginResult); //stalls here
  

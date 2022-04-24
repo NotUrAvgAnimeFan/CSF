@@ -33,13 +33,13 @@ int commandWhatToDo(Message &toSend, std::string &input, std::string &command, s
   return 0;  
 }
 
-void receiveAfterSend(Connection &conn, Message &toSend, Message &received) {
+int receiveAfterSend(Connection &conn, Message &toSend, Message &received) {
   if (conn.send(toSend)) {
     
     conn.receive(received);
     
     if (toSend.tag == "quit") {
-      return;
+      return 1;
     }
     
     if (received.tag == "err") {
@@ -55,7 +55,7 @@ void receiveAfterSend(Connection &conn, Message &toSend, Message &received) {
   }
   
   std::cout << "> ";
-
+  return 0;
 }
   
 void userInput(Connection &conn) {
@@ -86,7 +86,11 @@ void userInput(Connection &conn) {
 
     
     if (skipReceive == 0) {
-      receiveAfterSend(conn, toSend, received);
+
+      if (receiveAfterSend(conn, toSend, received) == 1) {
+	return;
+      }
+
     } else {
       std::cout << "> ";
       skipReceive = 0;
