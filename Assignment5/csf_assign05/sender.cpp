@@ -8,6 +8,32 @@
 #include "client_util.h"
 
 
+int commandWhatToDo(Message &toSend, std::string input, std::string command, std::string roomToJoin) {
+
+  if (command == "/join") {;
+    
+    if (roomToJoin.size() > 0) {
+      toSend = Message("join", input.substr(6));
+    } else {
+      std::cerr << "/join command needs room name" << std::endl;
+      std::cout << "> ";
+      return 1;
+    }
+    
+    
+  } else if (input == "/leave") {
+    toSend = Message("leave", "");
+  } else if (input == "/quit") {
+    toSend = Message("quit", "");
+  } else {
+    std::cerr << "command not defined" << std::endl;
+    std::cout << "> "; 
+    return 1;
+  }
+
+  return 0;  
+}
+  
 void userInput(Connection &conn) {
   std::string input;
   std::string command;
@@ -20,27 +46,11 @@ void userInput(Connection &conn) {
   while(getline(std::cin, input)) {
         
     if (input[0] == '/') {
-      if (input.substr(1,4) == "join") {
-	std::stringstream s(input);
-	std::getline(s, command, ' ');
-	std::getline(s, roomToJoin);
+      std::stringstream s(input);
+      std::getline(s, command, ' ');
+      std::getline(s, roomToJoin);
 
-	
-	if (roomToJoin.size() > 0) {
-	  toSend = Message("join", input.substr(6));
-	} else {
-	  std::cerr << "/join command needs room name" << std::endl;
-	  std::cout << "> ";
-	  continue;
-	}
-	
-	
-      } else if (input == "/leave") {
-	toSend = Message("leave", "");
-      } else if (input == "/quit") {
-	toSend = Message("quit", "");
-      } else {
-	std::cerr << "command not defined" << std::endl;
+      if (commandWhatToDo(toSend, input, command, roomToJoin) == 1) {
 	continue;
       }
       
@@ -134,70 +144,6 @@ int main(int argc, char **argv) {
 
   userInput(conn);
   
-  /*
-  std::string input;
-  std::string command;
-  std::string roomToJoin;
-  Message toSend;
-  Message received;
-
-  std::cout << "> ";
-  
-  while(getline(std::cin, input)) {
-        
-    if (input[0] == '/') {
-      if (input.substr(1,4) == "join") {
-	std::stringstream s(input);
-	std::getline(s, command, ' ');
-	std::getline(s, roomToJoin);
-
-	
-	if (roomToJoin.size() > 0) {
-	  toSend = Message("join", input.substr(6));
-	} else {
-	  std::cerr << "/join command needs room name" << std::endl;
-	  std::cout << "> ";
-	  continue;
-	}
-	
-	
-      } else if (input == "/leave") {
-	toSend = Message("leave", "");
-      } else if (input == "/quit") {
-	toSend = Message("quit", "");
-      } else {
-	std::cerr << "command not defined" << std::endl;
-	continue;
-      }
-      
-    } else {
-      toSend = Message("sendall", input.substr(0, input.size()));
-    }
-
-    
-    if (conn.send(toSend)) {
-      
-      conn.receive(received);
-
-      if (toSend.tag == "quit") {
-	break;
-      }
-      
-      if (received.tag == "err") {
-	std::cerr << received.data << std::endl;
-      }
-      
-      
-    } else if (conn.get_last_result() == conn.INVALID_MSG) {
-      std::cerr << "invalid tag used or total message sized exceeded 250 characters" << std::endl;
-      
-    } else {
-      std::cerr << "message send was unsuccessful" << std::endl;
-    }
-
-    std::cout << "> ";
-  }
-  */
 
   
   return 0;
