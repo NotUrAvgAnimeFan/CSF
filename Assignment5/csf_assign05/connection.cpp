@@ -24,12 +24,6 @@ void Connection::connect(const std::string &hostname, int port) {
 
   // TODO: call open_clientfd to connect to the server
   m_fd = open_clientfd(hostname.c_str(), str.c_str());
-
-  if (m_fd < 0) {
-    std::cout << "file descriptor not open" << std::endl;
-  } else {
-    std::cout << "file descriptor open" << std::endl;
-  }
   
 
   // TODO: call rio_readinitb to initialize the rio_t object

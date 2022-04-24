@@ -8,30 +8,54 @@
 #include "client_util.h"
 
 
-int commandWhatToDo(Message &toSend, std::string input, std::string command, std::string roomToJoin) {
+int commandWhatToDo(Message &toSend, std::string &input, std::string &command, std::string &roomToJoin) {
 
-  if (command == "/join") {;
-    
+  if (command == "/join") {
     if (roomToJoin.size() > 0) {
-      toSend = Message("join", input.substr(6));
+      toSend = Message("join", roomToJoin);
     } else {
-      std::cerr << "/join command needs room name" << std::endl;
-      std::cout << "> ";
+      std::cerr << "/join command needs room name\n> ";
+      
       return 1;
     }
     
     
   } else if (input == "/leave") {
     toSend = Message("leave", "");
+    roomToJoin = "";
   } else if (input == "/quit") {
     toSend = Message("quit", "");
   } else {
-    std::cerr << "command not defined" << std::endl;
-    std::cout << "> "; 
+    std::cerr << "command not defined\n> ";
     return 1;
   }
 
   return 0;  
+}
+
+void receiveAfterSend(Connection &conn, Message &toSend, Message &received) {
+  if (conn.send(toSend)) {
+    
+    conn.receive(received);
+    
+    if (toSend.tag == "quit") {
+      return;
+    }
+    
+    if (received.tag == "err") {
+      std::cerr << received.data << std::endl;
+    }
+    
+    
+  } else if (conn.get_last_result() == conn.INVALID_MSG) {
+    std::cerr << "invalid tag used or total message sized exceeded 250 characters" << std::endl;
+    
+  } else {
+    std::cerr << "message send was unsuccessful" << std::endl;
+  }
+  
+  std::cout << "> ";
+
 }
   
 void userInput(Connection &conn) {
@@ -40,7 +64,7 @@ void userInput(Connection &conn) {
   std::string roomToJoin;
   Message toSend;
   Message received;
-
+  int skipReceive = 0;
   std::cout << "> ";
   
   while(getline(std::cin, input)) {
@@ -54,11 +78,20 @@ void userInput(Connection &conn) {
 	continue;
       }
       
+    } else if (input.size() == 0) {
+      skipReceive = 1;
     } else {
       toSend = Message("sendall", input.substr(0, input.size()));
     }
 
     
+    if (skipReceive == 0) {
+      receiveAfterSend(conn, toSend, received);
+    } else {
+      std::cout << "> ";
+      skipReceive = 0;
+    }
+    /*
     if (conn.send(toSend)) {
       
       conn.receive(received);
@@ -80,6 +113,7 @@ void userInput(Connection &conn) {
     }
 
     std::cout << "> ";
+    */
   }
   
 }
@@ -144,7 +178,6 @@ int main(int argc, char **argv) {
 
   userInput(conn);
   
-
   
   return 0;
 }
