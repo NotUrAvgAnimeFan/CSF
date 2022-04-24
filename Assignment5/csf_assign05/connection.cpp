@@ -1,6 +1,15 @@
-#include <iostream>
-#include <string>
+/*
+ * Connection functions making communication between clients and the server work successfully.
+ * CSF Assignment 5 MS1
+ * Ricardo Morales Gonzalez
+ * rmorale5@jhu.edu
+ *
+ * Ana Kuri
+ * akuri1@jhu.edu
+ */
 
+
+#include <string>
 #include <cctype>
 #include <cassert>
 #include "csapp.h"
@@ -15,37 +24,37 @@ Connection::Connection()
 Connection::Connection(int fd)
   : m_fd(fd)
   , m_last_result(SUCCESS) {
-  // TODO: call rio_readinitb to initialize the rio_t object
+  
   rio_readinitb(&m_fdbuf, fd);
 }
 
 void Connection::connect(const std::string &hostname, int port) {
   std::string str = std::to_string(port);
 
-  // TODO: call open_clientfd to connect to the server
+  
   m_fd = open_clientfd(hostname.c_str(), str.c_str());
   
 
-  // TODO: call rio_readinitb to initialize the rio_t object
+  
   rio_readinitb(&m_fdbuf, m_fd);
 
   
 }
 
 Connection::~Connection() {
-  // TODO: close the socket if it is open
+  
   if (m_fd >= 0) {
     Close(m_fd);
   }
 }
 
 bool Connection::is_open() const {
-  // TODO: return true if the connection is open
+  
   return m_fd >= 0;
 }
 
 void Connection::close() {
-  // TODO: close the connection if it is open
+  
   if (is_open()) {
     Close(m_fd);
   }
@@ -53,17 +62,18 @@ void Connection::close() {
 }
 
 bool Connection::send(const Message &msg) {
-  // TODO: send a message
-  // return true if successful, false if not
-  // make sure that m_last_result is set appropriately
-
+  // stores the tag of message
   std::string tag = msg.tag;
 
+  // checks to make sure tag in msg is valid
   if (tag != TAG_SLOGIN && tag != TAG_RLOGIN && tag != TAG_JOIN && tag != TAG_LEAVE && tag != TAG_SENDALL && tag != TAG_QUIT ) {
+
+    // if not set m_last_result and returns false
     m_last_result = INVALID_MSG;
     return false;
   }
 
+  // compiles the entire string to be sent to the server
   std::string complete = tag + ':' + msg.data + '\n';
   
   
@@ -72,7 +82,7 @@ bool Connection::send(const Message &msg) {
     return false;
   }
   
-  
+  // stores the amount of bites actaully written
   int num_data = rio_writen(m_fd, complete.c_str(), complete.size());
   
   
@@ -92,26 +102,22 @@ bool Connection::send(const Message &msg) {
 
 
 bool Connection::receive(Message &msg) {
-  // TODO: receive a message, storing its tag and data in msg
-  // return true if successful, false if not
-  // make sure that m_last_result is set appropriately
 
-  
-  
-  
+  // creates a char buffer that will store message coming from the server
   char buf[msg.MAX_LEN];
 
-  size_t num_read = rio_readlineb(&m_fdbuf, buf, sizeof(buf)); //stalls here and doesn't continue
+  // reads message from server and stores contents in buf
+  size_t num_read = rio_readlineb(&m_fdbuf, buf, sizeof(buf)); 
   
   //message received unsuccessfully
   if (num_read < 0) {
 
+    // I/O or EOF error
     m_last_result = EOF_OR_ERROR;
-    
-    
     return false;
   }
 
+  // converts buf to string
   std::string messageReceived = buf;
   std::string nothing = "";
   

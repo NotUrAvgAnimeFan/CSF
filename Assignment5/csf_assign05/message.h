@@ -1,3 +1,16 @@
+/*
+ * Message.h file contains structure for messages
+ * CSF Assignment 5 MS1
+ *
+ * Ricardo Morales Gonzalez
+ * rmorale5@jhu.edu
+ *
+ * Ana Kuri
+ * akuri1@jhu.edu
+ */
+
+
+
 #ifndef MESSAGE_H
 #define MESSAGE_H
 
@@ -26,18 +39,23 @@ struct Message {
     std::vector<std::string> result;
     // TODO: split the message data into fields separated by ':', add them
     //       to result vector
-    
+
+    // strings to store tag and data of message
     std::string readTag;
     std::string readData;
 
+    // makes a string stream wth contents of data
     std::stringstream s(data);
 
+    // gets and stores tag and data from strignstream
     std::getline(s, readTag, ':');
     std::getline(s, readData);
-    
+
+    // puts tag and data into result vector
     result.push_back(readTag);
     result.push_back(readData);
-    
+
+    // returns vector back
     return result;
     
   }
