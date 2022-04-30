@@ -5,7 +5,7 @@
 MessageQueue::MessageQueue() {
   // TODO: initialize the mutex and the semaphore
   pthread_mutex_init(&m_lock, nullptr);
-  Sem_init(&m_avail, 0, 0);
+  sem_init(&m_avail, 0, 0);
   
 }
 
@@ -24,7 +24,7 @@ void MessageQueue::enqueue(Message *msg) {
   
   // be sure to notify any thread waiting for a message to be
   // available by calling sem_post
-  sem_post(&m_avail) // returns !0 if no threads were blocked, 0 if one of the blocked threads
+  sem_post(&m_avail); // returns !0 if no threads were blocked, 0 if one of the blocked threads
     //allowed to return successfully
 
 }
@@ -49,6 +49,7 @@ Message *MessageQueue::dequeue() {
   };
   
   // TODO: remove the next message from the queue, return it
-  Message *msg = m_messages.pop_front();
+  Message *msg = m_messages.front();
+  m_messages.pop_front();
   return msg;
 }

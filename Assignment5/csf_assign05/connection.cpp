@@ -62,12 +62,15 @@ void Connection::close() {
 }
 
 bool Connection::send(const Message &msg) {
+
+
+  
   // stores the tag of message
   std::string tag = msg.tag;
-
+ 
   // checks to make sure tag in msg is valid
-  if (tag != TAG_SLOGIN && tag != TAG_RLOGIN && tag != TAG_JOIN && tag != TAG_LEAVE && tag != TAG_SENDALL && tag != TAG_QUIT ) {
-
+  if (tag != TAG_ERR && tag != TAG_OK && tag != TAG_SLOGIN && tag != TAG_RLOGIN && tag != TAG_JOIN && tag != TAG_LEAVE && tag != TAG_SENDALL && tag != TAG_QUIT && tag != TAG_DELIVERY && TAG_EMPTY) {
+    
     // if not set m_last_result and returns false
     m_last_result = INVALID_MSG;
     return false;
@@ -83,11 +86,13 @@ bool Connection::send(const Message &msg) {
   }
   
   // stores the amount of bites actaully written
-  int num_data = rio_writen(m_fd, complete.c_str(), complete.size());
   
+  int num_data = rio_writen(m_fd, complete.c_str(), complete.size());
+
   
   //message sent unsuccessfully
   if (num_data < 0) {
+
     
     //I/O or EOF error
     m_last_result = EOF_OR_ERROR;
