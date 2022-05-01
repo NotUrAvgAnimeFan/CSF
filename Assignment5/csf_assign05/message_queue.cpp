@@ -1,3 +1,6 @@
+#include <iostream>
+
+
 #include <cassert>
 #include <ctime>
 #include "message_queue.h"
@@ -16,20 +19,23 @@ MessageQueue::~MessageQueue() {
 
 }
 
-void MessageQueue::enqueue(Message *msg) {
+void MessageQueue::enqueue(Message* msg) {
   // TODO: put the specified message on the queue
 
+
+  // --- Critical Section
+  
   m_messages.push_back(msg);
 
   
   // be sure to notify any thread waiting for a message to be
   // available by calling sem_post
   sem_post(&m_avail); // returns !0 if no threads were blocked, 0 if one of the blocked threads
-    //allowed to return successfully
-
+  //allowed to return successfully
+  
 }
 
-Message *MessageQueue::dequeue() {
+Message* MessageQueue::dequeue() {
   struct timespec ts;
 
   // get the current time using clock_gettime:
@@ -44,12 +50,20 @@ Message *MessageQueue::dequeue() {
   // TODO: call sem_timedwait to wait up to 1 second for a message
   //       to be available, return nullptr if no message is available
 
-  if (sem_timedwait(&m_avail, &ts) == -1) {
-    return nullptr;
-  };
+  //----------- Critical Section
+
   
+  int waitResult = sem_timedwait(&m_avail, &ts);
+
+  if (waitResult == -1) {
+    return nullptr;
+  }
+
   // TODO: remove the next message from the queue, return it
-  Message *msg = m_messages.front();
+  Message* msg = m_messages.front();
+
+  
   m_messages.pop_front();
+
   return msg;
 }

@@ -13,8 +13,8 @@ public:
   MessageQueue();
   ~MessageQueue();
 
-  void enqueue(Message *msg); // will not block
-  Message *dequeue();         // blocks for at most a finite amount of time
+  void enqueue(Message* msg); // will not block
+  Message* dequeue();         // blocks for at most a finite amount of time
 
 private:
   // value semantics prohibited
@@ -27,7 +27,7 @@ private:
 
   pthread_mutex_t m_lock; // must be held while accessing queue
   sem_t m_avail;
-  std::deque<Message *> m_messages;
+  std::deque<Message*> m_messages;
 };
 
 #endif // MESSAGE_QUEUE_H

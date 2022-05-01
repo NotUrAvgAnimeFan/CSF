@@ -34,6 +34,150 @@ struct ConnInfo {
 
 namespace {
   
+  void chat_with_recieveer(Message tag, std::unique_ptr<ConnInfo> info, User *user, ) {
+    // Receiver loop ------------------------------
+    
+    
+    if (join.tag != TAG_JOIN) {
+      info->conn->send(Message(TAG_ERR, "second message for receiver should be join"));
+      return;
+    } else {
+      info->conn->send(Message(TAG_OK, "successfully joined desired room"));
+    }
+    
+    Room *room = info->server->find_or_create_room(join.data);
+    
+    
+    room->add_member(user);
+    
+    while (true) {
+      
+      // try to deque a Message from the user's MessageQueue
+      Message* received = user->mqueue.dequeue();
+      
+      
+      
+      // if a Message was successfully dequeued, send a "delivery"
+      // message to the receiver. If the send is unsuccessful,
+      // break out of the loop (because it's likely that the receiver
+      // has exited and the connection is no longer valid)
+      
+      if (received != nullptr) {
+	
+	if (!info->conn->send(Message(TAG_DELIVERY,join.data + ':' + received->data))) {
+	  break;
+	}
+	
+	delete received;
+	
+      }
+      
+      // loops again
+    }
+    
+    // make suer to remove the User from the room
+    room->remove_member(user);
+    
+  }
+
+  void chat_with_sender() {
+
+    
+    //sender loop --------------------------
+    
+    
+    
+    while(join.tag != TAG_JOIN) {
+      
+      if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
+	return nullptr;
+      }
+      
+      
+      if (!info->conn->receive(join)) {
+	if (info->conn->get_last_result() == Connection::INVALID_MSG) {
+	  info->conn->send(Message(TAG_ERR, "invalid message"));
+	}
+	return nullptr;
+      }
+    }
+    
+    if (!info->conn->send(Message(TAG_OK, "successfully joined desired room"))) {
+      return nullptr;
+    }
+    
+    Room *room = info->server->find_or_create_room(join.data);
+    
+    
+    while (true) {
+      if (!info->conn->receive(join)) {
+	if (info->conn->get_last_result() == Connection::INVALID_MSG) {
+	  info->conn->send(Message(TAG_ERR, "invalid message"));
+	}
+	return nullptr;
+      }
+      
+      if (join.tag == TAG_JOIN) {
+	room = info->server->find_or_create_room(join.data);
+	
+	if (!info->conn->send(Message(TAG_OK, "joined room" + join.data))) {
+	  return nullptr;
+	}
+	
+	
+      } else if (join.tag == TAG_LEAVE) {
+	
+	if (room == nullptr) {
+	  
+	  if(!info->conn->send(Message(TAG_ERR, "not in a room"))) {
+	    return nullptr;
+	  }
+	  
+	} else {
+	  room = nullptr;
+	  
+	  if (!info->conn->send(Message(TAG_OK, "left room"))) {
+	    return nullptr;
+	  }
+	  
+	  
+	}
+	
+      } else if (join.tag == TAG_SENDALL) {
+	
+	if (room == nullptr) {
+	  
+	  if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
+	    return nullptr;
+	  }
+	  
+	  
+	} else if ((join.data.size() + 1 + join.tag.size()) > 255 || join.data.size() == 0) {
+	  
+	  if (!info->conn->send(Message(TAG_ERR, "message format is wrong"))) {
+	    return nullptr;
+	  }
+	  
+	} else {
+	  
+	  room->broadcast_message(username, join.data);
+	  
+	  if (!info->conn->send(Message(TAG_OK, "message sent to all users in room"))) {
+	    return nullptr;
+	  }
+	  
+	}
+	
+      } else {
+	if (!info->conn->send(Message(TAG_ERR, "invalid tag"))) {
+	  return nullptr;
+	}
+      }
+      
+    }
+      
+  }
+  
   void *worker(void *arg) {
     
     pthread_detach(pthread_self());
@@ -80,9 +224,10 @@ namespace {
     // separate into different scenarios depending on if Sender or Receiver was called
     
     if (msg.tag == TAG_RLOGIN) {
+      chat_with_receiver();
+      
+      /*
       // Receiver loop ------------------------------
-      
-      
       if (join.tag != TAG_JOIN) {
 	info->conn->send(Message(TAG_ERR, "second message for receiver should be join"));
 	return nullptr;
@@ -90,7 +235,7 @@ namespace {
 	info->conn->send(Message(TAG_OK, "successfully joined desired room"));
       }
       
-      Room *room = info->server->find_or_create_room(msg.data);
+      Room *room = info->server->find_or_create_room(join.data);
       
       
       room->add_member(user);
@@ -99,7 +244,8 @@ namespace {
 	
 	// try to deque a Message from the user's MessageQueue
 	Message* received = user->mqueue.dequeue();
-	
+
+        
 	
 	// if a Message was successfully dequeued, send a "delivery"
 	// message to the receiver. If the send is unsuccessful,
@@ -107,16 +253,21 @@ namespace {
 	// has exited and the connection is no longer valid)
 	
 	if (received != nullptr) {
-	  
-	  if (!info->conn->send(Message(TAG_DELIVERY, msg.data+':'+username+':'+received->data))) {
+	    
+	  if (!info->conn->send(Message(TAG_DELIVERY,join.data + ':' + received->data))) {
 	    break;
-	  };
+	  }
+
+	  delete received;
+	  
 	}
+
+	// loops again
       }
       
       // make suer to remove the User from the room
       room->remove_member(user);
-      
+      */
     } else {
       
       //sender loop --------------------------
@@ -128,7 +279,7 @@ namespace {
 	if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
 	  return nullptr;
 	}
-      
+	
 	
 	if (!info->conn->receive(join)) {
 	  if (info->conn->get_last_result() == Connection::INVALID_MSG) {
@@ -142,7 +293,7 @@ namespace {
 	return nullptr;
       }
       
-      Room *room = info->server->find_or_create_room(msg.data);
+      Room *room = info->server->find_or_create_room(join.data);
       
       
       while (true) {
@@ -195,7 +346,7 @@ namespace {
 	    }
 	    
 	  } else {
-	    
+
 	    room->broadcast_message(username, join.data);
 	    
 	    if (!info->conn->send(Message(TAG_OK, "message sent to all users in room"))) {
@@ -218,24 +369,6 @@ namespace {
     return nullptr;
     
     
-    /*
-    // Just loop reading messages and sending an ok response for each one
-    while (true) {
-      // this is what needs to be changed
-      if (!info->conn->receive(msg)) {
-	if (info->conn->get_last_result() == Connection::INVALID_MSG) {
-	  info->conn->send(Message(TAG_ERR, "invalid message"));
-	}
-	break;
-      }
-      
-      if (!info->conn->send(Message(TAG_OK, "this is just a dummy response"))) {
-	break;
-      }
-    }
-    
-    return nullptr;
-    */
   }
   
 }
