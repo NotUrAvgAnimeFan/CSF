@@ -1,3 +1,17 @@
+/*
+ * server.cpp file handles all connections and messges between clients with threads for each one  
+ * CSF Assignment 5 MS2
+ * Ricardo Morales Gonzalez
+ * rmorale5@jhu.edu
+ *
+ * Ana Kuri
+ * akuri1@jhu.edu
+ *
+ */
+
+
+
+
 #include <pthread.h>
 #include <iostream>
 #include <sstream>
@@ -33,6 +47,8 @@ struct ConnInfo {
 ////////////////////////////////////////////////////////////////////////
 
 namespace {
+
+
   
   void chat_with_receiver(Message &msg, std::unique_ptr<ConnInfo> &info, User *user) {
     // Receiver loop ------------------------------
@@ -78,10 +94,17 @@ namespace {
     
   }
 
+
   
   int join_loop(Message &msg, std::unique_ptr<ConnInfo> &info) {
     
     while(msg.tag != TAG_JOIN) {
+
+      if (msg.tag == TAG_QUIT) {
+        info->conn->send(Message(TAG_OK, "quit program"));
+
+	return -1;
+      }
       
       if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
 	return -1;
@@ -101,7 +124,7 @@ namespace {
     
     
   }
-
+  
 
   
   int sendall_function(Message &msg, std::unique_ptr<ConnInfo> &info, Room* room, std::string &username) {
@@ -161,9 +184,9 @@ namespace {
     }
     return 0;
   }
-
-
-  void split_work(Message &msg, std::unique_ptr<ConnInfo> &info, Room* room, std::string &username) {
+  
+  
+  void split_work(Message &msg, std::unique_ptr<ConnInfo> &info, Room* &room, std::string &username) {
 
     while (true) {
       
@@ -191,6 +214,8 @@ namespace {
 	  return;
 	}
       } else if (msg.tag == TAG_QUIT) {
+        info->conn->send(Message(TAG_OK, "quit program"));
+
 	return;
       } else {
 	if (!info->conn->send(Message(TAG_ERR, "invalid tag"))) {
@@ -207,6 +232,7 @@ namespace {
 	 
     //sender loop --------------------------
 
+
     if (join_loop(msg, info) == -1) {
       return;
     }
@@ -220,7 +246,7 @@ namespace {
 
     
     Room *room = info->server->find_or_create_room(msg.data);
-
+    
     split_work(msg, info, room, username);
 
     
@@ -277,37 +303,7 @@ namespace {
     
     if (receive_and_login(msg, username, info, user, join) == -1) {
       return nullptr;
-    }
-    /*
-    if (!info->conn->receive(msg)) {
-      if (info->conn->get_last_result() == Connection::INVALID_MSG) {
-	info->conn->send(Message(TAG_ERR, "invalid message"));
-      }
-      return nullptr;
-    }
-    
-    if (msg.tag != TAG_SLOGIN && msg.tag != TAG_RLOGIN) {
-      info->conn->send(Message(TAG_ERR, "first message should be slogin or rlogin"));
-      return nullptr;
-    }
-    
-    std::string username = msg.data;
-    if (!info->conn->send(Message(TAG_OK, "welcome " + username))) {
-      return nullptr;
-    }
-    
-    
-    User *user = new User(username);
-    Message join;
-    
-    if (!info->conn->receive(join)) {
-      if (info->conn->get_last_result() == Connection::INVALID_MSG) {
-	info->conn->send(Message(TAG_ERR, "invalid message"));
-      }
-      return nullptr;
-    }
-    */
-    
+    }    
     
     // separate into different scenarios depending on if Sender or Receiver was called
     
@@ -350,7 +346,7 @@ bool Server::listen() {
 }
 
 void Server::handle_client_requests() {
-  
+
   assert(m_ssock >= 0);
   
   while (true) {
