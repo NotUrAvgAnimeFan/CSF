@@ -22,8 +22,6 @@ MessageQueue::~MessageQueue() {
 void MessageQueue::enqueue(Message* msg) {
   // TODO: put the specified message on the queue
 
-
-  // --- Critical Section
   
   m_messages.push_back(msg);
 
@@ -36,6 +34,7 @@ void MessageQueue::enqueue(Message* msg) {
 }
 
 Message* MessageQueue::dequeue() {
+  
   struct timespec ts;
 
   // get the current time using clock_gettime:

@@ -49,6 +49,8 @@ namespace {
     room->add_member(user);
     
     while (true) {
+
+      //Guard g(m_lock);
       
       // try to deque a Message from the user's MessageQueue
       Message* received = user->mqueue.dequeue();
@@ -188,6 +190,8 @@ namespace {
 	if (sendall_function(msg, info, room, username) == -1) {
 	  return;
 	}
+      } else if (msg.tag == TAG_QUIT) {
+	return;
       } else {
 	if (!info->conn->send(Message(TAG_ERR, "invalid tag"))) {
 	  return;
