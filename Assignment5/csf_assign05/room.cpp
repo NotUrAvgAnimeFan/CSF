@@ -1,10 +1,21 @@
+/*
+ * Room Handles Room object which includes users and their data 
+ *
+ * CSF Assignment 5 MS2 
+ * Ricardo Morales Gonzalez
+ * rmorale5@jhu.edu
+ *
+ * Ana Kuri
+ * akuri1@jhu.edu
+ */
+
+
 #include "guard.h"
 #include "message.h"
 #include "message_queue.h"
 #include "user.h"
 #include "room.h"
 
-#include <iostream>
 
 Room::Room(const std::string &room_name)
   : room_name(room_name) {
@@ -17,7 +28,7 @@ Room::~Room() {
 }
 
 void Room::add_member(User *user) {
-  
+  // ---------- critical section
   Guard g(lock);
   
   members.insert(user);
