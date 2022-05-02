@@ -91,7 +91,7 @@ bool Connection::send(const Message &msg) {
 
   
   //message sent unsuccessfully
-  if (num_data != complete.size()) {
+  if (num_data != (int) complete.size()) {
 
     
     //I/O or EOF error

@@ -34,7 +34,7 @@ struct ConnInfo {
 
 namespace {
   
-  void chat_with_receiver(Message msg, std::unique_ptr<ConnInfo> info, User *user) {
+  void chat_with_receiver(Message &msg, std::unique_ptr<ConnInfo> &info, User *user) {
     // Receiver loop ------------------------------
 
     if (msg.tag != TAG_JOIN) {
@@ -76,10 +76,138 @@ namespace {
     
   }
 
-  void chat_with_sender(Message msg, std::unique_ptr<ConnInfo> info) {
+  
+  int join_loop(Message &msg, std::unique_ptr<ConnInfo> &info) {
+    
+    while(msg.tag != TAG_JOIN) {
+      
+      if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
+	return -1;
+      }
+      
+      
+      if (!info->conn->receive(msg)) {
+	if (info->conn->get_last_result() == Connection::INVALID_MSG) {
+	  info->conn->send(Message(TAG_ERR, "invalid message"));
+	}
+	return -1;
+      }
+    }
+    
+    return 0;
+    
+    
+    
+  }
+
+
+  
+  int sendall_function(Message &msg, std::unique_ptr<ConnInfo> &info, Room* room, std::string &username) {
+
+    if (room == nullptr) {
+      
+      if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
+	return -1;
+      }
+      
+      
+    } else if ((msg.data.size() + 1 + msg.tag.size()) > 255 || msg.data.size() == 0) {
+      
+      if (!info->conn->send(Message(TAG_ERR, "message format is wrong"))) {
+	return -1;
+      }
+      
+    } else {
+      
+      room->broadcast_message(username, msg.data);
+      
+      if (!info->conn->send(Message(TAG_OK, "message sent to all users in room"))) {
+	return -1;
+      }
+      
+    }
+    return 0;
+  }
+
+  int leave_function(Message &msg, std::unique_ptr<ConnInfo> &info, Room* room) {
+    
+    if (room == nullptr) {
+      
+      if(!info->conn->send(Message(TAG_ERR, "not in a room"))) {
+	return -1;
+      }
+      
+    } else {
+      room = nullptr;
+      
+      if (!info->conn->send(Message(TAG_OK, "left room"))) {
+	return -1;
+      }
+      
+      
+    }
+    
+    return 0;
+  }
+
+  int receive_function(Message &msg, std::unique_ptr<ConnInfo> &info) {
+    if (!info->conn->receive(msg)) {
+      if (info->conn->get_last_result() == Connection::INVALID_MSG) {
+	info->conn->send(Message(TAG_ERR, "invalid message"));
+      }
+      return -1;
+    }
+    return 0;
+  }
+
+
+  void split_work(Message &msg, std::unique_ptr<ConnInfo> &info, Room* room, std::string &username) {
+
+    while (true) {
+      
+      if (receive_function(msg, info) == -1) {
+	return;
+      }
+      
+      if (msg.tag == TAG_JOIN) {
+	room = info->server->find_or_create_room(msg.data);
+	
+	if (!info->conn->send(Message(TAG_OK, "joined room" + msg.data))) {
+	  return;
+	}
+	
+	
+      } else if (msg.tag == TAG_LEAVE) {
+	
+	if (leave_function(msg, info, room) == -1) {
+	  return;
+	}
+	
+	
+      } else if (msg.tag == TAG_SENDALL) {
+	if (sendall_function(msg, info, room, username) == -1) {
+	  return;
+	}
+      } else {
+	if (!info->conn->send(Message(TAG_ERR, "invalid tag"))) {
+	  return;
+	}
+      }
+      
+    }
+    
+  }
+  
+  
+  void chat_with_sender(Message msg, std::unique_ptr<ConnInfo> &info, std::string &username) {
 	 
     //sender loop --------------------------
 
+    if (join_loop(msg, info) == -1) {
+      return;
+    }
+    
+    /*
     while(msg.tag != TAG_JOIN) {
       
       if (!info->conn->send(Message(TAG_ERR, "not in a room"))) {
@@ -94,21 +222,36 @@ namespace {
 	return;
       }
     }
+    */
+
+    
     
     if (!info->conn->send(Message(TAG_OK, "successfully joined desired room"))) {
       return;
     }
+
+
     
     Room *room = info->server->find_or_create_room(msg.data);
-    
-    
+
+    split_work(msg, info, room, username);
+
+    /*
     while (true) {
+      
+      if (receive_function() == -1) {
+	return;
+      }
+      
+      
       if (!info->conn->receive(msg)) {
 	if (info->conn->get_last_result() == Connection::INVALID_MSG) {
 	  info->conn->send(Message(TAG_ERR, "invalid message"));
 	}
 	return;
       }
+      
+
       
       if (msg.tag == TAG_JOIN) {
 	room = info->server->find_or_create_room(msg.data);
@@ -119,6 +262,11 @@ namespace {
 	
 	
       } else if (msg.tag == TAG_LEAVE) {
+
+	if (leave_function(&msg, &info, room) == -1) {
+	  return;
+	}
+	
 	
 	if (room == nullptr) {
 	  
@@ -136,7 +284,12 @@ namespace {
 	  
 	}
 	
+	
       } else if (msg.tag == TAG_SENDALL) {
+	if (sendall_function(msg, info, room) == -1) {
+	  return;
+	}
+	
 	
 	if (room == nullptr) {
 	  
@@ -164,11 +317,11 @@ namespace {
       } else {
 	if (!info->conn->send(Message(TAG_ERR, "invalid tag"))) {
 	  return;
-	}
+	  }
       }
-      
+	
     }
-      
+    */
   }
   
   void *worker(void *arg) {
@@ -264,7 +417,7 @@ namespace {
     } else {
       
       //sender loop --------------------------
-      chat_with_sender(msg, info);
+      chat_with_sender(join, info, username);
       
       /*
       while(join.tag != TAG_JOIN) {
